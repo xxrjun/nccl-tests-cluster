@@ -1,0 +1,13 @@
+# dotenv
+.env
+
+# virtualenv
+venv/
+.venv/
+ENV/**
+
+# vscode
+.vscode
+
+# Mac
+.DS_Store
