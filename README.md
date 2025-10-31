@@ -1,14 +1,17 @@
-# NCCL Tests Cluster
+<h1 align="center">
+NCCL Tests Cluster
+</h1>
 
+<p align="center">
 Automated Inter-node bandwidth testing and visualization for GPU clusters using NCCL.
+</p>
 
-<figure style="text-align:center">
+<p align="center">
   <img src="./assets/cluster00_topology_alltoall_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" style="max-width:100%;height:auto;" />
-  <figcaption style="margin-top:0.5em;">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</figcaption>
-
+  <p align="center" style="font-size: 10pt">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>
   <!-- <img src="./assets/cluster00_topology_sendrecv_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)" style="max-width:100%;height:auto;" />
   <figcaption style="margin-top:0.5em;">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)</figcaption> -->
-</figure>
+</p>
 
 **Key Features:**
 
