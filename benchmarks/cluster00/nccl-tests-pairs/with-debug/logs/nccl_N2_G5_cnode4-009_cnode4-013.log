@@ -1,0 +1,66 @@
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 1 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 1292463 on cnode4-009 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 1292464 on cnode4-009 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 1292465 on cnode4-009 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 1292466 on cnode4-009 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 1292467 on cnode4-009 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 2604282 on cnode4-013 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 2604283 on cnode4-013 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 2604284 on cnode4-013 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 2604285 on cnode4-013 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 2604286 on cnode4-013 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw #wrong     time   algbw   busbw #wrong
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)            (us)  (GB/s)  (GB/s)       
+    33554400        419430    double    none      -1   4250.0    7.90    7.11      0   4493.6    7.47    6.72    N/A
+    67108800        838860    double    none      -1   5572.6   12.04   10.84      0   5016.5   13.38   12.04    N/A
+   134217600       1677720    double    none      -1   9959.5   13.48   12.13      0    10720   12.52   11.27    N/A
+   268435360       3355442    double    none      -1    19042   14.10   12.69      0    20583   13.04   11.74    N/A
+   536870880       6710886    double    none      -1    49417   10.86    9.78      0    47684   11.26   10.13    N/A
+  1073741760      13421772    double    none      -1    92436   11.62   10.45      0    80934   13.27   11.94    N/A
+  2147483520      26843544    double    none      -1   211576   10.15    9.13      0   254290    8.45    7.60    N/A
+  4294967200      53687090    double    none      -1   465476    9.23    8.30      0   459779    9.34    8.41    N/A
+  8589934560     107374182    double    none      -1  1086881    7.90    7.11      0  1180272    7.28    6.55    N/A
+ 17179869120     214748364    double    none      -1  3323103    5.17    4.65      0  3689211    4.66    4.19    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 9.13929 
+#
+# Collective test concluded: alltoall_perf
+
+# Collective test starting: sendrecv_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 1 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 1297824 on cnode4-009 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 1297825 on cnode4-009 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 1297826 on cnode4-009 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 1297827 on cnode4-009 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 1297828 on cnode4-009 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 2609513 on cnode4-013 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 2609514 on cnode4-013 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 2609515 on cnode4-013 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 2609516 on cnode4-013 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 2609517 on cnode4-013 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw #wrong     time   algbw   busbw #wrong
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)            (us)  (GB/s)  (GB/s)       
+    33554432       4194304    double     sum      -1   4245.7    7.90    7.90      0   2608.8   12.86   12.86    N/A
+    67108864       8388608    double     sum      -1   5055.8   13.27   13.27      0   5125.7   13.09   13.09    N/A
+   134217728      16777216    double     sum      -1   7941.6   16.90   16.90      0   7526.1   17.83   17.83    N/A
+   268435456      33554432    double     sum      -1    13853   19.38   19.38      0    11654   23.03   23.03    N/A
+   536870912      67108864    double     sum      -1    22173   24.21   24.21      0    23200   23.14   23.14    N/A
+  1073741824     134217728    double     sum      -1    44824   23.95   23.95      0    44857   23.94   23.94    N/A
+  2147483648     268435456    double     sum      -1    88994   24.13   24.13      0    89091   24.10   24.10    N/A
+  4294967296     536870912    double     sum      -1   177517   24.19   24.19      0   177485   24.20   24.20    N/A
+  8589934592    1073741824    double     sum      -1   354367   24.24   24.24      0   355062   24.19   24.19    N/A
+ 17179869184    2147483648    double     sum      -1   708048   24.26   24.26      0   709344   24.22   24.22    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 20.6534 
+#
+# Collective test concluded: sendrecv_perf
+

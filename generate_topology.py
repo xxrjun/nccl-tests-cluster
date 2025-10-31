@@ -1,0 +1,810 @@
+"""
+Generate topology visualizations from NCCL benchmark summary.
+
+Features
+- Process all tests and G values automatically, or specify individual test/G
+- Auto-organized output: topology/{test_name}/G{n}.png and topology/{test_name}/allG.png
+- Respects directory structure (preserves with-debug/, without-debug/)
+- Customizable layouts, colors, edge widths, and label positioning
+- Optional automatic label adjustment to avoid overlaps
+
+Behavior
+- Default (--all): Process all tests and G values from CSV, organized by test_name
+- --test specified: Process only that test, all G values
+- --test and --g specified: Single image (backward compatible)
+
+Usage
+  # Process all tests and G values (recommended)
+  python generate_topology.py --csv ./summary.csv --all
+
+  # Process single test, all G values
+  python generate_topology.py --csv ./summary.csv --test alltoall_perf
+
+  # Single G image (backward compatible)
+  python generate_topology.py --csv ./summary.csv --test alltoall_perf --g 1
+
+  # With custom styling and label adjustment
+  python generate_topology.py --csv ./summary.csv --all \
+    --vmin 0 --vmax 80 --layout shell --adjust-labels
+
+References
+  NetworkX examples: https://networkx.org/documentation/stable/auto_examples/
+  Colormaps: https://matplotlib.org/stable/users/explain/colors/colormaps.html
+"""
+
+import argparse
+import math
+import pathlib
+import warnings
+from typing import Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import pandas as pd
+from adjustText import adjust_text
+from matplotlib import cm
+from matplotlib.colors import Normalize
+
+# ===========================================================
+# Constants
+# ===========================================================
+
+REQUIRED_COLS = {
+    "file",
+    "test",
+    "N",
+    "G",
+    "nodes",
+    "minBytes",
+    "maxBytes",
+    "avg_bus_bw_GBs",
+    "peak_busbw_GBs",
+}
+
+DEFAULT_NODE_SIZE = 2400
+DEFAULT_FONT_SIZE = 7
+DEFAULT_EDGE_LABEL_FONT_SIZE = 9
+DEFAULT_CMAP = "YlGn"
+CMAP_VMIN_RATIO = 0.25  # Trim the lightest 25% of colormap for better visibility
+CMAP_VMAX_RATIO = 1.0  # Keep the darkest colors
+
+# ===========================================================
+# Arg parsing & validation
+# ===========================================================
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Generate professional topology image(s) from NCCL link CSV."
+    )
+    p.add_argument("--csv", required=True, help="Input CSV path.")
+    p.add_argument(
+        "--test",
+        default=None,
+        help="Test type to filter (e.g., alltoall_perf, sendrecv_perf). If omitted with --all, processes all tests.",
+    )
+    p.add_argument(
+        "--g", type=int, default=None, help="GPU count G to filter (e.g., 1,2,4,8)."
+    )
+    p.add_argument(
+        "--all",
+        action="store_true",
+        help="Process all tests and G values. Ignored if --test and --g are both specified.",
+    )
+    p.add_argument(
+        "--out",
+        default=None,
+        help="Output PNG path for single-G mode. Deprecated in favor of --out-dir.",
+    )
+    p.add_argument(
+        "--out-dir",
+        default=None,
+        help="Output directory for images. Default: ./topology or {csv_dir}/topology",
+    )
+    p.add_argument(
+        "--combine-out",
+        default=None,
+        help="Combined image output path (only used in multi-G mode). Default: {test_name}/allG.png",
+    )
+    p.add_argument(
+        "--title", default=None, help="Optional figure title (single-G only)."
+    )
+    p.add_argument(
+        "--layout",
+        choices=["kamada", "spring", "circular", "shell", "bipartite"],
+        default="shell",
+        help="Graph layout algorithm.",
+    )
+    p.add_argument(
+        "--seed", type=int, default=42, help="Seed for deterministic layouts."
+    )
+    p.add_argument(
+        "--vmin",
+        type=float,
+        default=None,
+        help="Color scale minimum (GB/s). Auto if omitted.",
+    )
+    p.add_argument(
+        "--vmax",
+        type=float,
+        default=None,
+        help="Color scale maximum (GB/s). Auto if omitted.",
+    )
+    p.add_argument("--min-width", type=float, default=1.5, help="Minimum edge width.")
+    p.add_argument("--max-width", type=float, default=6.0, help="Maximum edge width.")
+    p.add_argument(
+        "--decimals", type=int, default=1, help="Decimals for edge label numbers."
+    )
+    p.add_argument("--dpi", type=int, default=300, help="Output DPI.")
+
+    # Multi-G presentation controls
+    p.add_argument(
+        "--combine-cols",
+        type=int,
+        default=4,
+        help="Number of columns in the combined grid (multi-G).",
+    )
+    p.add_argument(
+        "--no-combine",
+        action="store_true",
+        help="If set, do not create combined multi-G image (still emits per-G PNGs).",
+    )
+    p.add_argument(
+        "--global-scale",
+        action="store_true",
+        help="Force shared vmin/vmax and edge-width scale across all G subplots.",
+    )
+    p.add_argument(
+        "--adjust-labels",
+        action="store_true",
+        help="Enable automatic label adjustment to avoid overlaps. May move labels away from edge centers.",
+    )
+    return p.parse_args()
+
+
+def validate_args(args: argparse.Namespace) -> None:
+    """Validate command line arguments."""
+    if args.vmin is not None and args.vmax is not None:
+        if args.vmin >= args.vmax:
+            raise ValueError("--vmin must be less than --vmax")
+    if args.dpi <= 0:
+        raise ValueError("--dpi must be positive")
+
+    # Determine mode
+    if args.test is None and args.g is None and not args.all:
+        warnings.warn(
+            "No --test, --g, or --all specified. Defaulting to --all mode.", UserWarning
+        )
+        args.all = True
+
+
+def validate_df(df: pd.DataFrame) -> None:
+    missing = REQUIRED_COLS - set(df.columns)
+    if missing:
+        raise ValueError(f"CSV is missing required columns: {sorted(missing)}")
+
+
+# ===========================================================
+# Data utilities
+# ===========================================================
+
+
+def normalize_pair(nodes_str: str) -> Tuple[str, str]:
+    s = nodes_str.strip().strip('"').strip("'")
+    parts = [x.strip() for x in s.split(",") if x.strip()]
+    if len(parts) != 2:
+        raise ValueError(
+            f"Invalid nodes field (expect two comma-separated names): {nodes_str!r}"
+        )
+    a, b = sorted(parts)
+    return (a, b)
+
+
+def aggregate_links(df: pd.DataFrame) -> pd.DataFrame:
+    # Expect df already filtered by test and (optionally) G
+    pairs = df["nodes"].apply(normalize_pair)
+    df = df.copy()
+    df[["node_a", "node_b"]] = pd.DataFrame(pairs.tolist(), index=df.index)
+    # Average over duplicate pairs if present
+    agg = df.groupby(["node_a", "node_b"], as_index=False).agg(
+        avg_bus_bw_GBs=("avg_bus_bw_GBs", "mean"),
+        count=("avg_bus_bw_GBs", "size"),
+    )
+    return agg
+
+
+# ===========================================================
+# Graph utilities
+# ===========================================================
+
+
+def pick_layout(G: nx.Graph, which: str, seed: int) -> Dict[str, Tuple[float, float]]:
+    if which == "kamada":
+        return nx.kamada_kawai_layout(G, weight=None, scale=1.0)
+    if which == "spring":
+        return nx.spring_layout(G, seed=seed, k=None)  # automatic k
+    if which == "circular":
+        return nx.circular_layout(G)
+    if which == "shell":
+        return nx.shell_layout(G, nlist=[list(G.nodes())])
+    if which == "bipartite":
+        nodes = sorted(G.nodes())
+        left = nodes[0 : (len(nodes) + 1) // 2]
+        return nx.bipartite_layout(
+            G, left, align="vertical", aspect_ratio=0.5, scale=1.0
+        )
+    raise ValueError(f"Unsupported layout: {which}")
+
+
+def dynamic_figsize(n_nodes: int) -> Tuple[float, float]:
+    base = 6.0
+    if n_nodes <= 6:
+        return (base, base)
+    s = base + 0.5 * math.sqrt(max(0, n_nodes - 6))
+    return (min(14.0, s), min(14.0, s))
+
+
+def compute_edge_widths(values: List[float], wmin: float, wmax: float) -> List[float]:
+    if not values:
+        return []
+    lo, hi = min(values), max(values)
+    if math.isclose(lo, hi, rel_tol=1e-12, abs_tol=1e-12):
+        return [0.5 * (wmin + wmax)] * len(values)
+    return [wmin + (v - lo) * (wmax - wmin) / (hi - lo) for v in values]
+
+
+def build_graph(agg_df: pd.DataFrame) -> nx.Graph:
+    G = nx.Graph()
+    nodes = sorted(set(agg_df["node_a"]).union(set(agg_df["node_b"])))
+    G.add_nodes_from(nodes)
+    for _, row in agg_df.iterrows():
+        G.add_edge(
+            row["node_a"],
+            row["node_b"],
+            bw=float(row["avg_bus_bw_GBs"]),
+            n=int(row["count"]),
+        )
+    return G
+
+
+# ===========================================================
+# Drawing
+# ===========================================================
+
+
+def get_trimmed_colormap():
+    """
+    Get a trimmed colormap that excludes the lightest colors for better visibility.
+
+    Returns:
+        Trimmed colormap with better contrast.
+    """
+    from matplotlib.colors import LinearSegmentedColormap
+
+    base_cmap = plt.colormaps.get_cmap(DEFAULT_CMAP)
+    # Sample the colormap but skip the lightest part
+    colors = base_cmap(np.linspace(CMAP_VMIN_RATIO, CMAP_VMAX_RATIO, 256))
+    return LinearSegmentedColormap.from_list(f"{DEFAULT_CMAP}_trimmed", colors)
+
+
+def add_colorbar(
+    fig: plt.Figure,
+    ax,
+    vmin: float,
+    vmax: float,
+    label: str = "Average bus BW (GB/s)",
+    **kwargs,
+):
+    """Add colorbar to figure."""
+    sm = cm.ScalarMappable(
+        norm=Normalize(vmin=vmin, vmax=vmax, clip=True), cmap=get_trimmed_colormap()
+    )
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, **kwargs)
+    cbar.set_label(label)
+    return cbar
+
+
+def draw_topology_ax(
+    G: nx.Graph,
+    pos: Dict[str, Tuple[float, float]],
+    ax: plt.Axes,
+    *,
+    vmin: float,
+    vmax: float,
+    min_width: float,
+    max_width: float,
+    decimals: int,
+    title: Optional[str] = None,
+    adjust_labels: bool = False,
+):
+    ax.set_axis_off()
+    bws = [G[u][v]["bw"] for u, v in G.edges()]
+    norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
+    cmap = get_trimmed_colormap()
+    edge_colors = [cmap(norm(bw)) for bw in bws]
+    edge_widths = compute_edge_widths(bws, min_width, max_width)
+
+    # Nodes/labels
+    nx.draw_networkx_nodes(
+        G,
+        pos,
+        ax=ax,
+        node_color="white",
+        edgecolors="black",
+        node_size=DEFAULT_NODE_SIZE,
+        linewidths=1.2,
+    )
+    nx.draw_networkx_labels(
+        G, pos, ax=ax, font_size=DEFAULT_FONT_SIZE, font_weight="semibold"
+    )
+
+    # Edges + labels
+    nx.draw_networkx_edges(G, pos, ax=ax, width=edge_widths, edge_color=edge_colors)
+
+    # Create edge labels
+    fmt = f"{{:.{decimals}f}}"
+
+    if adjust_labels:
+        # Use adjustText for automatic overlap avoidance (more conservative settings)
+        texts = []
+        for u, v in G.edges():
+            # Calculate midpoint of edge
+            x = (pos[u][0] + pos[v][0]) / 2
+            y = (pos[u][1] + pos[v][1]) / 2
+            label = fmt.format(G[u][v]["bw"])
+
+            text = ax.text(
+                x,
+                y,
+                label,
+                fontsize=DEFAULT_EDGE_LABEL_FONT_SIZE,
+                ha="center",
+                va="center",
+                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7),
+            )
+            texts.append(text)
+
+        # Apply adjustment with conservative settings
+        # only_move: only move overlapping labels (not all of them)
+        # lim: limit movement to a smaller radius
+        if len(texts) > 1:
+            adjust_text(
+                texts,
+                only_move={"text": "xy"},  # Only move text, not other elements
+                arrowprops=dict(
+                    arrowstyle="-",  # Simple line instead of arrow
+                    color="gray",
+                    lw=0.5,
+                    alpha=0.3,
+                    shrinkA=5,  # Shrink from text bbox
+                    shrinkB=5,  # Shrink from original position
+                ),
+                expand_text=(1.01, 1.05),  # Very conservative expansion
+                expand_points=(1.01, 1.05),
+                force_text=(0.1, 0.1),  # Lower force = less aggressive movement
+                force_points=(0.05, 0.05),
+                lim=100,  # Limit number of iterations
+                ax=ax,
+            )
+    else:
+        # Use default networkx edge labels (no adjustment)
+        edge_labels = {(u, v): fmt.format(G[u][v]["bw"]) for u, v in G.edges()}
+        nx.draw_networkx_edge_labels(
+            G,
+            pos,
+            ax=ax,
+            edge_labels=edge_labels,
+            font_size=DEFAULT_EDGE_LABEL_FONT_SIZE,
+            rotate=False,
+            label_pos=0.5,
+            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7),
+            verticalalignment="bottom",
+        )
+
+    if title:
+        ax.set_title(title, fontsize=11, pad=10)
+
+
+def compute_scales_for_groups(
+    agg_per_g: Dict[int, pd.DataFrame],
+    user_vmin: Optional[float],
+    user_vmax: Optional[float],
+    min_width: float,
+    max_width: float,
+    global_scale: bool,
+):
+    """Return (vmin, vmax, width_min, width_max, perG_bw_minmax)."""
+    perG_minmax = {}
+    all_bws = []
+    for g, agg in agg_per_g.items():
+        bws = agg["avg_bus_bw_GBs"].tolist()
+        if bws:
+            perG_minmax[g] = (min(bws), max(bws))
+            all_bws.extend(bws)
+        else:
+            perG_minmax[g] = (0.0, 1.0)
+
+    # Color scale
+    if user_vmin is not None and user_vmax is not None:
+        vmin, vmax = float(user_vmin), float(user_vmax)
+    elif global_scale and all_bws:
+        vmin, vmax = min(all_bws), max(all_bws)
+    else:
+        # Will set per-subplot later using perG_minmax.
+        vmin = vmax = None
+
+    # Edge-width scale
+    width_min, width_max = min_width, max_width
+    return vmin, vmax, width_min, width_max, perG_minmax
+
+
+# ===========================================================
+# Output path management
+# ===========================================================
+
+
+def determine_output_dir(
+    csv_path: pathlib.Path, out_dir: Optional[str]
+) -> pathlib.Path:
+    """
+    Determine the base output directory.
+
+    Priority:
+    1. User-specified --out-dir
+    2. {csv_dir}/topology (preserves with-debug/without-debug structure)
+    3. ./topology (fallback)
+    """
+    if out_dir:
+        return pathlib.Path(out_dir)
+
+    # Auto-detect: place topology/ in same directory as CSV
+    csv_dir = csv_path.parent
+    return csv_dir / "topology"
+
+
+def get_output_paths(
+    base_dir: pathlib.Path,
+    test_name: str,
+    g: Optional[int] = None,
+    combined: bool = False,
+) -> pathlib.Path:
+    """
+    Generate output path following the structure: topology/{test_name}/G{g}.png
+
+    Args:
+        base_dir: Base topology directory
+        test_name: Test name (e.g., alltoall_perf)
+        g: G value (None for combined)
+        combined: True for allG.png
+
+    Returns:
+        Full path to output file
+    """
+    test_dir = base_dir / test_name
+    test_dir.mkdir(parents=True, exist_ok=True)
+
+    if combined:
+        return test_dir / "allG.png"
+    elif g is not None:
+        return test_dir / f"G{g}.png"
+    else:
+        raise ValueError("Either g or combined must be specified")
+
+
+# ===========================================================
+# Processing logic
+# ===========================================================
+
+
+def process_single_g(
+    df: pd.DataFrame,
+    test_name: str,
+    g_value: int,
+    args: argparse.Namespace,
+    output_path: pathlib.Path,
+) -> None:
+    """Process and save a single G value for a test."""
+    filtered = df[(df["test"] == test_name) & (df["G"] == g_value)]
+    if filtered.empty:
+        warnings.warn(
+            f"No data for test={test_name}, G={g_value}. Skipping.", UserWarning
+        )
+        return
+
+    agg = aggregate_links(filtered)
+    Gx = build_graph(agg)
+    pos = pick_layout(Gx, args.layout, args.seed)
+
+    bws = [float(x) for x in agg["avg_bus_bw_GBs"].tolist()]
+    if bws:
+        auto_vmin = min(bws)
+        auto_vmax = max(bws)
+    else:
+        auto_vmin, auto_vmax = 0.0, 1.0
+
+    vmin = args.vmin if args.vmin is not None else auto_vmin
+    vmax = args.vmax if args.vmax is not None else auto_vmax
+    if math.isclose(vmin, vmax, rel_tol=1e-12, abs_tol=1e-12):
+        vmin -= 0.5
+        vmax += 0.5
+
+    figsize = dynamic_figsize(len(Gx.nodes()))
+    fig, ax = plt.subplots(figsize=figsize, dpi=args.dpi)
+    draw_topology_ax(
+        Gx,
+        pos,
+        ax,
+        vmin=vmin,
+        vmax=vmax,
+        min_width=args.min_width,
+        max_width=args.max_width,
+        decimals=args.decimals,
+        title=(args.title if args.title else f"{test_name} — N=2, G={g_value}"),
+        adjust_labels=args.adjust_labels,
+    )
+
+    add_colorbar(fig, ax, vmin, vmax, fraction=0.046, pad=0.04)
+
+    fig.tight_layout()
+    fig.savefig(output_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved: {output_path}")
+
+
+def process_multi_g(
+    df: pd.DataFrame,
+    test_name: str,
+    g_values: List[int],
+    args: argparse.Namespace,
+    base_dir: pathlib.Path,
+) -> None:
+    """Process multiple G values for a single test."""
+    print(f"\nProcessing test: {test_name}")
+
+    # Aggregate per G
+    agg_per_g: Dict[int, pd.DataFrame] = {}
+    union_edges = []
+    for g in g_values:
+        gdf = df[(df["test"] == test_name) & (df["G"] == g)]
+        if gdf.empty:
+            warnings.warn(
+                f"No data for test={test_name}, G={g}. Skipping.", UserWarning
+            )
+            continue
+        agg = aggregate_links(gdf)
+        agg_per_g[g] = agg
+        union_edges.append(agg[["node_a", "node_b"]])
+
+    if not agg_per_g:
+        warnings.warn(
+            f"No data for test={test_name}. Skipping entire test.", UserWarning
+        )
+        return
+
+    g_values_with_data = sorted(agg_per_g.keys())
+
+    union_nodes = set()
+    for agg in agg_per_g.values():
+        union_nodes.update(agg["node_a"].tolist())
+        union_nodes.update(agg["node_b"].tolist())
+
+    # Build a union graph for layout stability across subplots
+    G_union = nx.Graph()
+    G_union.add_nodes_from(sorted(union_nodes))
+    for agg in agg_per_g.values():
+        for _, row in agg.iterrows():
+            u, v = row["node_a"], row["node_b"]
+            if not G_union.has_edge(u, v):
+                G_union.add_edge(u, v)
+    pos_union = pick_layout(G_union, args.layout, args.seed)
+
+    # Scales - always use global scale for multi-G comparison
+    global_scale = True
+    vmin_glob, vmax_glob, wmin, wmax, perG_minmax = compute_scales_for_groups(
+        agg_per_g,
+        args.vmin,
+        args.vmax,
+        args.min_width,
+        args.max_width,
+        global_scale=global_scale,
+    )
+
+    # Emit per-G images
+    for g in g_values_with_data:
+        agg = agg_per_g[g]
+        Gx = build_graph(agg)
+        figsize = dynamic_figsize(len(G_union.nodes()))
+        fig, ax = plt.subplots(figsize=figsize, dpi=args.dpi)
+
+        if vmin_glob is None or vmax_glob is None:
+            lo, hi = perG_minmax[g]
+            vmin, vmax = lo, hi
+            if math.isclose(vmin, vmax, rel_tol=1e-12, abs_tol=1e-12):
+                vmin -= 0.5
+                vmax += 0.5
+        else:
+            vmin, vmax = vmin_glob, vmax_glob
+
+        draw_topology_ax(
+            Gx,
+            pos_union,
+            ax,
+            vmin=vmin,
+            vmax=vmax,
+            min_width=wmin,
+            max_width=wmax,
+            decimals=args.decimals,
+            title=f"{test_name} — N=2, G={g}",
+            adjust_labels=args.adjust_labels,
+        )
+
+        add_colorbar(fig, ax, vmin, vmax, fraction=0.046, pad=0.04)
+
+        out_path = get_output_paths(base_dir, test_name, g=g)
+        fig.tight_layout()
+        fig.savefig(out_path, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {out_path}")
+
+    # Combined grid
+    if not args.no_combine and len(g_values_with_data) > 1:
+        n = len(g_values_with_data)
+        cols = max(1, int(args.combine_cols))
+        rows = (n + cols - 1) // cols
+
+        panel_w, panel_h = dynamic_figsize(len(G_union.nodes()))
+        panel_w = max(4.0, min(8.0, panel_w * 0.9))
+        panel_h = max(4.0, min(8.0, panel_h * 0.9))
+
+        fig_w = cols * panel_w
+        fig_h = rows * panel_h
+
+        fig, axes = plt.subplots(rows, cols, figsize=(fig_w, fig_h), dpi=args.dpi)
+        if not isinstance(axes, (list, tuple, pd.Series, np.ndarray)):
+            axes = [[axes]]
+        else:
+            if isinstance(axes, np.ndarray):
+                if axes.ndim == 1:
+                    axes = np.expand_dims(axes, axis=0)
+                axes = axes.tolist()
+
+        # Decide global color scale for the combined figure
+        if vmin_glob is None or vmax_glob is None:
+            all_bws = []
+            for agg in agg_per_g.values():
+                all_bws.extend(agg["avg_bus_bw_GBs"].tolist())
+            if all_bws:
+                vmin_c, vmax_c = min(all_bws), max(all_bws)
+                if math.isclose(vmin_c, vmax_c, rel_tol=1e-12, abs_tol=1e-12):
+                    vmin_c -= 0.5
+                    vmax_c += 0.5
+            else:
+                vmin_c, vmax_c = 0.0, 1.0
+        else:
+            vmin_c, vmax_c = vmin_glob, vmax_glob
+
+        # Draw each subplot
+        ax_list = [ax for row_axes in axes for ax in row_axes]
+        for idx, g in enumerate(g_values_with_data):
+            ax = ax_list[idx]
+            agg = agg_per_g[g]
+            Gx = build_graph(agg)
+            draw_topology_ax(
+                Gx,
+                pos_union,
+                ax,
+                vmin=vmin_c,
+                vmax=vmax_c,
+                min_width=wmin,
+                max_width=wmax,
+                decimals=args.decimals,
+                title=f"G={g}",
+                adjust_labels=args.adjust_labels,
+            )
+
+        # Hide any extra axes
+        for j in range(len(g_values_with_data), len(ax_list)):
+            ax_list[j].axis("off")
+
+        # Shared colorbar
+        add_colorbar(
+            fig,
+            ax_list[: len(g_values_with_data)],
+            vmin_c,
+            vmax_c,
+            fraction=0.02,
+            pad=0.02,
+        )
+
+        # Suptitle
+        fig.suptitle(f"{test_name} — all G", fontsize=13, y=0.995)
+
+        # Save combined
+        combined_path = get_output_paths(base_dir, test_name, combined=True)
+        fig.savefig(combined_path, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {combined_path}")
+
+
+# ===========================================================
+# Main
+# ===========================================================
+
+
+def main():
+    args = parse_args()
+    validate_args(args)
+
+    csv_path = pathlib.Path(args.csv)
+    if not csv_path.exists():
+        raise FileNotFoundError(csv_path)
+
+    df = pd.read_csv(csv_path)
+    validate_df(df)
+
+    # Determine output directory
+    base_output_dir = determine_output_dir(csv_path, args.out_dir)
+
+    # Determine processing mode
+    single_g_mode = args.test is not None and args.g is not None
+    single_test_mode = args.test is not None and args.g is None
+    all_mode = args.all or (args.test is None and args.g is None)
+
+    if single_g_mode:
+        # Single G, single test (backward compatible)
+        print(f"Mode: Single test ({args.test}), single G ({args.g})")
+
+        if args.out:
+            output_path = pathlib.Path(args.out)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            output_path = get_output_paths(base_output_dir, args.test, g=args.g)
+
+        process_single_g(df, args.test, args.g, args, output_path)
+        print(f"\nDone! Output: {output_path}")
+
+    elif single_test_mode:
+        # Single test, all G values
+        print(f"Mode: Single test ({args.test}), all G values")
+
+        df_test = df[df["test"] == args.test]
+        if df_test.empty:
+            raise SystemExit(f"No rows for test={args.test}")
+
+        g_values = sorted(df_test["G"].dropna().astype(int).unique().tolist())
+        if not g_values:
+            raise SystemExit(f"No G values found for test={args.test}")
+
+        process_multi_g(df, args.test, g_values, args, base_output_dir)
+        print(f"\nDone! Output directory: {base_output_dir / args.test}")
+
+    elif all_mode:
+        # All tests, all G values
+        print("Mode: All tests, all G values")
+
+        test_names = sorted(df["test"].dropna().unique().tolist())
+        if not test_names:
+            raise SystemExit("No test names found in CSV")
+
+        print(f"Found {len(test_names)} test(s): {', '.join(test_names)}")
+
+        for test_name in test_names:
+            df_test = df[df["test"] == test_name]
+            g_values = sorted(df_test["G"].dropna().astype(int).unique().tolist())
+
+            if not g_values:
+                warnings.warn(
+                    f"No G values for test={test_name}. Skipping.", UserWarning
+                )
+                continue
+
+            process_multi_g(df, test_name, g_values, args, base_output_dir)
+
+        print(f"\nDone! Output directory: {base_output_dir}")
+        print(f"Structure: {base_output_dir}/{{test_name}}/G{{n}}.png")
+
+
+if __name__ == "__main__":
+    main()
