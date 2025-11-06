@@ -7,9 +7,9 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 </p>
 
 <p align="center">
-  <img src="./assets/cluster00_topology_alltoall_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" style="max-width:100%;height:auto;" />
+  <img src="./assets/cluster00_topology_alltoall_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" />
   <p align="center" style="font-size: 10pt">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>
-  <!-- <img src="./assets/cluster00_topology_sendrecv_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)" style="max-width:100%;height:auto;" />
+  <!-- <img src="./assets/cluster00_topology_sendrecv_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)"/>
   <figcaption style="margin-top:0.5em;">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)</figcaption> -->
 </p>
 
@@ -234,5 +234,5 @@ Run `python generate_topology.py --help` for all options.
 
 - For large clusters (e.g., N=17), the topology becomes too crowded (currently being addressed).
 
-    <img src="./assets/17node_cluster_topology_alltoall_allG.png" alt="Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" style="max-width:60%;height:auto;" />
+    <img src="./assets/17node_cluster_topology_alltoall_allG.png" alt="Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" width="600" />
     <p style="font-size: 10pt">Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>
