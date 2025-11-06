@@ -131,7 +131,7 @@ View all options to use CLI script.
 bash sbatch_run_nccl_tests_pairs.sh --help
 ```
 
-Or modify the **SLURM and Test Settings** section in the script to configure nodes, GPUs, and test parameters as needed. Then run the script to submit jobs.
+Or modify the **SLURM and Test Settings** section in the script to configure partition, nodes, GPUs, and test parameters as needed. Then run the script to submit jobs.
 
 > It is highly recommended to use only two nodes to verify that your NCCL environment is working correctly.
 
@@ -211,7 +211,7 @@ python generate_topology.py --csv ./summary.csv --all \
 - `--all`: Process all tests and G values
 - `--test NAME`: Process specific test only
 - `--adjust-labels`: Auto-adjust overlapping labels (useful for dense graphs)
-- `--layout`: Algorithm (`shell`, `spring`, `kamada`, `circular`, `bipartite`)
+- `--layout`: Algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`)
 - `--vmin/--vmax`: Bandwidth color scale range
 - `--dpi`: Resolution (default: 300)
 
@@ -230,9 +230,13 @@ Run `python generate_topology.py --help` for all options.
   export NCCL_SOCKET_IFNAME=<iface>
   ```
 
+- If you find red lines in the topology graphs, it indicates failed tests or missing data. Check the corresponding log files for errors.
+ 
+  <img src="./assets/17node_cluster_topology_alltoall_allG.png" alt="Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" width="600" />
+    <p style="font-size: 10pt">Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>
+
 ## Known Issues
 
-- For large clusters (e.g., N=17), the topology becomes too crowded (currently being addressed).
+- For large clusters, the topology becomes too crowded and hard to identify the performance differences between groups (if any). Consider splitting the cluster into smaller sub-clusters for better visualization. It is be planned to add better support for large clusters in future releases.
 
-    <img src="./assets/17node_cluster_topology_alltoall_allG.png" alt="Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" width="600" />
-    <p style="font-size: 10pt">Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>
+    

@@ -40,6 +40,7 @@ from typing import Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import networkx.algorithms.community as nx_comm
 import numpy as np
 import pandas as pd
 from adjustText import adjust_text
@@ -112,8 +113,8 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--layout",
-        choices=["kamada", "spring", "circular", "shell", "bipartite"],
-        default="shell",
+        choices=["kamada", "spring", "circular", "shell", "bipartite", "cluster"],
+        default="kamada",
         help="Graph layout algorithm.",
     )
     p.add_argument(
@@ -132,7 +133,7 @@ def parse_args() -> argparse.Namespace:
         help="Color scale maximum (GB/s). Auto if omitted.",
     )
     p.add_argument("--min-width", type=float, default=1.5, help="Minimum edge width.")
-    p.add_argument("--max-width", type=float, default=6.0, help="Maximum edge width.")
+    p.add_argument("--max-width", type=float, default=3.0, help="Maximum edge width.")
     p.add_argument(
         "--decimals", type=int, default=1, help="Decimals for edge label numbers."
     )
@@ -219,9 +220,30 @@ def aggregate_links(df: pd.DataFrame) -> pd.DataFrame:
 # ===========================================================
 
 
+def bandwidth_clustering(G: nx.Graph, threshold: float) -> List[List[str]]:
+    G_filtered = nx.Graph()
+    G_filtered.add_nodes_from(G.nodes())
+
+    for u, v, data in G.edges(data=True):
+        if data["bw"] >= threshold:
+            G_filtered.add_edge(u, v, bw=data["bw"])
+
+    communities = list(nx.connected_components(G_filtered))
+
+    if len(communities) == 1 and threshold > 0:
+        print(f"  Threshold {threshold} too high, trying {threshold * 0.8}")
+        return bandwidth_clustering(G, threshold * 0.8)
+
+    return [sorted(list(comm)) for comm in communities]
+
+
 def pick_layout(G: nx.Graph, which: str, seed: int) -> Dict[str, Tuple[float, float]]:
     if which == "kamada":
-        return nx.kamada_kawai_layout(G, weight=None, scale=1.0)
+        has_bw = all("bw" in G[u][v] for u, v in G.edges()) if G.edges() else False
+        if has_bw:
+            return nx.kamada_kawai_layout(G, weight="bw", scale=1.0)
+        else:
+            return nx.kamada_kawai_layout(G, weight=None, scale=1.0)
     if which == "spring":
         return nx.spring_layout(G, seed=seed, k=None)  # automatic k
     if which == "circular":
@@ -234,6 +256,40 @@ def pick_layout(G: nx.Graph, which: str, seed: int) -> Dict[str, Tuple[float, fl
         return nx.bipartite_layout(
             G, left, align="vertical", aspect_ratio=0.5, scale=1.0
         )
+    if which in ["cluster"]:
+        has_bw = all("bw" in G[u][v] for u, v in G.edges())
+        weight = "bw" if has_bw else None
+        if not has_bw:
+            print(
+                "Warning: Graph edges missing 'bw' attribute, using unweighted clustering."
+            )
+
+        communities = list(nx_comm.greedy_modularity_communities(G, weight=weight))
+        print(
+            f"  Detected {len(communities)} communities using modularity (weighted={has_bw})."
+        )
+
+        if len(communities) == 1 and has_bw:
+            print("Graph is too dense, trying bandwidth-based clustering...")
+            bws = [G[u][v]["bw"] for u, v in G.edges()]
+            threshold = np.percentile(bws, 50)
+            communities = bandwidth_clustering(G, threshold)
+            print(
+                f"  Bandwidth clustering found {len(communities)} groups (threshold={threshold:.1f})"
+            )
+
+        if len(communities) == 1:
+            print("Still only 1 community, using spring layout.")
+            return nx.spring_layout(G, seed=seed)
+
+        supergraph = nx.cycle_graph(len(communities))
+        superpos = nx.spring_layout(supergraph, scale=3, seed=seed)
+        centers = list(superpos.values())
+        pos = {}
+        for center, comm in zip(centers, communities):
+            pos.update(nx.spring_layout(nx.subgraph(G, comm), center=center, seed=seed))
+        return pos
+
     raise ValueError(f"Unsupported layout: {which}")
 
 
@@ -241,8 +297,11 @@ def dynamic_figsize(n_nodes: int) -> Tuple[float, float]:
     base = 6.0
     if n_nodes <= 6:
         return (base, base)
-    s = base + 0.5 * math.sqrt(max(0, n_nodes - 6))
-    return (min(14.0, s), min(14.0, s))
+    s = base + 0.6 * math.sqrt(max(0, n_nodes - 6))
+    if n_nodes > 12:
+        s *= 1.5
+    max_size = 20.0 if n_nodes > 12 else 14.0
+    return (min(max_size, s), min(max_size, s))
 
 
 def compute_edge_widths(values: List[float], wmin: float, wmax: float) -> List[float]:
@@ -320,13 +379,30 @@ def draw_topology_ax(
     adjust_labels: bool = False,
 ):
     ax.set_axis_off()
-    bws = [G[u][v]["bw"] for u, v in G.edges()]
-    norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
-    cmap = get_trimmed_colormap()
-    edge_colors = [cmap(norm(bw)) for bw in bws]
-    edge_widths = compute_edge_widths(bws, min_width, max_width)
 
-    # Nodes/labels
+    # Get all nodes
+    all_nodes = list(G.nodes())
+
+    # Separate edges into normal (with valid bw) and missing/NaN edges
+    normal_edges = []
+    missing_edges = []
+    normal_bws = []
+
+    # Check all possible node pairs
+    for i, u in enumerate(all_nodes):
+        for v in all_nodes[i + 1 :]:  # Only check upper triangle (undirected graph)
+            if G.has_edge(u, v):
+                bw = G[u][v]["bw"]
+                if pd.isna(bw) or (isinstance(bw, float) and math.isnan(bw)):
+                    missing_edges.append((u, v))
+                else:
+                    normal_edges.append((u, v))
+                    normal_bws.append(float(bw))
+            else:
+                # Edge doesn't exist in graph - mark as missing
+                missing_edges.append((u, v))
+
+    # Draw nodes and labels
     nx.draw_networkx_nodes(
         G,
         pos,
@@ -340,17 +416,42 @@ def draw_topology_ax(
         G, pos, ax=ax, font_size=DEFAULT_FONT_SIZE, font_weight="semibold"
     )
 
-    # Edges + labels
-    nx.draw_networkx_edges(G, pos, ax=ax, width=edge_widths, edge_color=edge_colors)
+    # Draw normal edges (using colormap)
+    if normal_edges:
+        norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
+        cmap = get_trimmed_colormap()
+        edge_colors = [cmap(norm(G[u][v]["bw"])) for u, v in normal_edges]
+        edge_widths = compute_edge_widths(normal_bws, min_width, max_width)
 
-    # Create edge labels
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            ax=ax,
+            edgelist=normal_edges,
+            width=edge_widths,
+            edge_color=edge_colors,
+        )
+
+    # Draw missing/NaN edges (red dashed lines, no labels)
+    if missing_edges:
+        nx.draw_networkx_edges(
+            G if len(G.edges()) > 0 else nx.complete_graph(all_nodes),
+            pos,
+            ax=ax,
+            edgelist=missing_edges,
+            width=2.5,
+            edge_color="red",
+            style="dashed",
+            alpha=0.6,
+        )
+
+    # Create edge labels (only for normal edges with valid values)
     fmt = f"{{:.{decimals}f}}"
 
     if adjust_labels:
-        # Use adjustText for automatic overlap avoidance (more conservative settings)
+        # Use adjustText for automatic overlap avoidance
         texts = []
-        for u, v in G.edges():
-            # Calculate midpoint of edge
+        for u, v in normal_edges:  # Only label normal edges
             x = (pos[u][0] + pos[v][0]) / 2
             y = (pos[u][1] + pos[v][1]) / 2
             label = fmt.format(G[u][v]["bw"])
@@ -366,42 +467,40 @@ def draw_topology_ax(
             )
             texts.append(text)
 
-        # Apply adjustment with conservative settings
-        # only_move: only move overlapping labels (not all of them)
-        # lim: limit movement to a smaller radius
         if len(texts) > 1:
             adjust_text(
                 texts,
-                only_move={"text": "xy"},  # Only move text, not other elements
+                only_move={"text": "xy"},
                 arrowprops=dict(
-                    arrowstyle="-",  # Simple line instead of arrow
+                    arrowstyle="-",
                     color="gray",
                     lw=0.5,
                     alpha=0.3,
-                    shrinkA=5,  # Shrink from text bbox
-                    shrinkB=5,  # Shrink from original position
+                    shrinkA=5,
+                    shrinkB=5,
                 ),
-                expand_text=(1.01, 1.05),  # Very conservative expansion
+                expand_text=(1.01, 1.05),
                 expand_points=(1.01, 1.05),
-                force_text=(0.1, 0.1),  # Lower force = less aggressive movement
+                force_text=(0.1, 0.1),
                 force_points=(0.05, 0.05),
-                lim=100,  # Limit number of iterations
+                lim=100,
                 ax=ax,
             )
     else:
-        # Use default networkx edge labels (no adjustment)
-        edge_labels = {(u, v): fmt.format(G[u][v]["bw"]) for u, v in G.edges()}
-        nx.draw_networkx_edge_labels(
-            G,
-            pos,
-            ax=ax,
-            edge_labels=edge_labels,
-            font_size=DEFAULT_EDGE_LABEL_FONT_SIZE,
-            rotate=False,
-            label_pos=0.5,
-            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7),
-            verticalalignment="bottom",
-        )
+        # Use default networkx edge labels (only for normal edges)
+        edge_labels = {(u, v): fmt.format(G[u][v]["bw"]) for u, v in normal_edges}
+        if edge_labels:
+            nx.draw_networkx_edge_labels(
+                G,
+                pos,
+                ax=ax,
+                edge_labels=edge_labels,
+                font_size=DEFAULT_EDGE_LABEL_FONT_SIZE,
+                rotate=False,
+                label_pos=0.5,
+                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7),
+                verticalalignment="bottom",
+            )
 
     if title:
         ax.set_title(title, fontsize=11, pad=10)
@@ -593,11 +692,18 @@ def process_multi_g(
     # Build a union graph for layout stability across subplots
     G_union = nx.Graph()
     G_union.add_nodes_from(sorted(union_nodes))
+    edge_bws = {}  # (u, v) -> [bw1, bw2, ...]
     for agg in agg_per_g.values():
         for _, row in agg.iterrows():
             u, v = row["node_a"], row["node_b"]
-            if not G_union.has_edge(u, v):
-                G_union.add_edge(u, v)
+            edge_key = tuple(sorted([u, v]))
+            if edge_key not in edge_bws:
+                edge_bws[edge_key] = []
+            edge_bws[edge_key].append(float(row["avg_bus_bw_GBs"]))
+
+    for (u, v), bws in edge_bws.items():
+        G_union.add_edge(u, v, bw=float(np.mean(bws)))
+
     pos_union = pick_layout(G_union, args.layout, args.seed)
 
     # Scales - always use global scale for multi-G comparison
