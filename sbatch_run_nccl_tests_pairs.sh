@@ -43,6 +43,8 @@ while [[ $# -gt 0 ]]; do
       GPN_LIST="$2"; shift 2;;
     --dry-run)
       DRY_RUN=1; shift;;
+    --debug)
+      DEBUG=1; shift;;
     -h|--help)
       usage; exit 0;;
     *)
@@ -64,15 +66,27 @@ CPUS_PER_TASK=${CPUS_PER_TASK:-2}
 DEBUG=${DEBUG:-0} # WARN: may affect performance results
 DRY_RUN=${DRY_RUN:-0}
 
-LOG_DIR=${LOG_DIR:-"benchmarks/cluster01/nccl-tests-pairs/without-debug/logs"}
+CLUSTER_NAME=${CLUSTER_NAME:-}
+
+if [[ $DEBUG -eq 1 ]]; then
+  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-tests-pairs/with-debug/logs"}
+else
+  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-tests-pairs/without-debug/logs"}
+fi
 mkdir -p "${LOG_DIR}"
 
 # =============================================================
 # NCCL Tests Settings
+# nccl env vars docs: https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
 # =============================================================
+# export NCCL_SOCKET_IFNAME= # specifies which IP interfaces to use for communication.
+# export NCCL_IB_HCA=
 
-# Optional: set your nccl-tests repo path via env before running
+# Optional: set your nccl / nccl-tests path via env before running
+export NCCL_HOME="${NCCL_HOME:-$HOME/nccl-tests-cluster/nccl/build}"
 export NCCL_TEST="${NCCL_TEST:-$HOME/nccl-tests-cluster/nccl/nccl-tests}"
+export LD_LIBRARY_PATH=$NCCL_HOME/lib:$LD_LIBRARY_PATH
+
 MAXIMUM_TRANSFER_SIZE=16G
 MINIMUM_TRANSFER_SIZE=32M
 STEP_FACTOR=2
@@ -90,6 +104,7 @@ RUN_BIN=(
     # reduce_perf
 )
 
+
 if [[ ! -d "${NCCL_TEST}/build" ]]; then
     echo "Error: NCCL_TEST path not found: ${NCCL_TEST}/build" >&2
     exit 1
@@ -99,7 +114,6 @@ if [[ "$DEBUG" -eq 1 ]]; then
   echo "NCCL DEBUG: Enabled"
 
   # WARN: NCCL debug env vars may affect performance results
-  # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#
   export NCCL_DEBUG=INFO 
   export NCCL_DEBUG_SUBSYS=ALL,^CALL,^PROXY
  
@@ -170,9 +184,11 @@ for pair in "${pairs[@]}"; do
 
     echo "Submit: ${job}  --nodelist=${A},${B}  --gpus-per-node=${gpn}"
 
+
     # Build NCCL test commands
     nccl_cmd=""
     for bin in "${RUN_BIN[@]}"; do
+      # nccl_cmd+="srun --mpi=pmix --nodes=2 --ntasks-per-node=${gpn} --ntasks $(( gpn * 2 )) ${NCCL_TEST}/build/${bin}"
       nccl_cmd+="srun ${NCCL_TEST}/build/${bin}"
       nccl_cmd+=" --iters ${ITERS_COUNT}"
       nccl_cmd+=" --warmup_iters ${WARMUP_ITERS}"
