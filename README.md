@@ -34,6 +34,8 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
   - [Summarize Logs](#summarize-logs)
   - [Generate Topology Graphs](#generate-topology-graphs)
 - [Useful Links](#useful-links)
+- [Troubleshooting](#troubleshooting)
+- [Known Issues](#known-issues)
 
 ## Limitations
 
@@ -84,8 +86,8 @@ cd nccl-tests-cluster
 ```
 
 > [!TIP]
-> This project is build on [NVIDIA/nccl](https://github.com/nvidia/nccl) and [NVIDIA/nccl-tests](https://github.com/NVIDIA/nccl-tests). Please refer to their README files for more information about NCCL and NCCL tests. 
-> 
+> This project is build on [NVIDIA/nccl](https://github.com/nvidia/nccl) and [NVIDIA/nccl-tests](https://github.com/NVIDIA/nccl-tests). Please refer to their README files for more information about NCCL and NCCL tests.
+>
 > Or you can run with the provided build script `build_nccl_and_tests.sh` to build NCCL and NCCL tests automatically.
 
 ```bash
@@ -131,8 +133,36 @@ bash sbatch_run_nccl_tests_pairs.sh --help
 
 Or modify the **SLURM and Test Settings** section in the script to configure nodes, GPUs, and test parameters as needed. Then run the script to submit jobs.
 
+> It is highly recommended to use only two nodes to verify that your NCCL environment is working correctly.
+
 ```bash
 bash sbatch_run_nccl_tests_pairs.sh
+```
+
+After execution, you should see a summary table similar to the following:
+
+```bash
+# ...
+Submitted batch job 1215
+Submitted 1088 jobs. (0 skipped due to existing logs.)
+Total pairs: 136. Total jobs: 1088.
+==========================================
+Submission Summary
+==========================================
+Total pairs:    136
+Jobs per pair:  8
+Total jobs:     1088
+Submitted:      1088
+Skipped:        0
+DRY RUN:        0
+NCCL DEBUG:     0
+==========================================
+```
+
+If necessary, you can cancel all running jobs using the following command
+
+```bash
+scancel -u $USER
 ```
 
 ### Summarize Logs
@@ -164,7 +194,7 @@ Visualize network topology with bandwidth heatmaps from `summary.csv`.
 
 ```bash
 # Process all tests and G values (recommended)
-python generate_topology.py --csv benchmarks/.../summary.csv --all
+python generate_topology.py --csv benchmarks/cluster01/nccl-tests-pairs/without-debug/summary.csv --all
 
 # Single test, all G values
 python generate_topology.py --csv ./summary.csv --test alltoall_perf
@@ -191,3 +221,18 @@ Run `python generate_topology.py --help` for all options.
 
 - [docs] [NVIDIA NCCL Documentation](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/index.html)
 - [paper] [[2507.04786] Demystifying NCCL: An In-depth Analysis of GPU Communication Protocols and Algorithms](https://arxiv.org/abs/2507.04786)
+
+## Troubleshooting
+
+- If single-node tests succeed but multi-node tests fail, try specifying the network interface for communication:
+
+  ```bash
+  export NCCL_SOCKET_IFNAME=<iface>
+  ```
+
+## Known Issues
+
+- For large clusters (e.g., N=17), the topology becomes too crowded (currently being addressed).
+
+    <img src="./assets/17node_cluster_topology_alltoall_allG.png" alt="Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" style="max-width:100%;height:auto;" />
+  <p align="center" style="font-size: 10pt">Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>

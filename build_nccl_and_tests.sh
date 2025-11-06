@@ -2,10 +2,10 @@
 
 
 # YOU MAY NEED TO CHANGE THE PATH BELOW
-# export CUDA_HOME="/usr/local/cuda"
+export CUDA_HOME=${CUDA_HOME:-"/usr/local/cuda"}
 export NCCL_HOME="${NCCL_HOME:-$HOME/nccl-tests-cluster/nccl/build}"
-# export LD_LIBRARY_PATH=$NCCL_HOME/lib:$LD_LIBRARY_PATH
-# export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$NCCL_HOME/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 # export PATH=/usr/local/cuda/bin:$PATH
 
 git clone https://github.com/NVIDIA/nccl.git || true
@@ -15,7 +15,6 @@ if [ ! -d nccl ]; then
 fi
 cd nccl || exit 1
 git clone https://github.com/NVIDIA/nccl-tests.git || true
-cd .. || exit 1 
 
 
 echo "====================================="
@@ -23,7 +22,7 @@ echo "Build NCCL"
 echo "====================================="
 
 # You can also check the GPU architecture via https://developer.nvidia.com/cuda-gpus
-ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n 1 | sed 's/\.//g')
+ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n 1 | sed 's/\.//g') # FIXME: login node might not have GPU
 echo "Detected GPU Architecture: $ARCH"
 make -j32 src.build NVCC_GENCODE="-gencode=arch=compute_${ARCH},code=sm_${ARCH}"
 
@@ -43,8 +42,9 @@ if [ ! -d nccl-tests ]; then
 fi
 cd nccl-tests || exit 1
 
-# This assume CUDA is installed in /usr/local/cuda, otherwise, set CUDA_HOME accordingly
-make NCCL_HOME=$NCCL_HOME
+# If This assume CUDA is installed in /usr/local/cuda, otherwise, set CUDA_HOME accordingly
+# make MPI=1 NCCL_HOME=$NCCL_HOME
+make MPI=1 NCCL_HOME=$NCCL_HOME CUDA_HOME=$CUDA_HOME
 # make CUDA_HOME=/path/to/cuda NCCL_HOME=/path/to/nccl
 
 cd ../.. || exit 1
