@@ -24,6 +24,7 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 
 ## Table of Contents <!-- omit in toc -->
 
+- [Motivation](#motivation)
 - [Limitations](#limitations)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
@@ -36,6 +37,22 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 - [Useful Links](#useful-links)
 - [Troubleshooting](#troubleshooting)
 - [Known Issues](#known-issues)
+
+## Motivation
+
+[NVIDIA’s NCCL Tests](https://github.com/NVIDIA/nccl-tests) already provides a reliable and privilege-free way to benchmark GPU communication performance. However, in real-world HPC or cloud environments, users without administrative access often face limited visibility into the system. Tools such as **NVIDIA DCGM**, **nvtop**, or low-level network profilers are typically unavailable, making it difficult to obtain a clear picture of inter-node communication performance.
+
+This raises a practical challenge:
+
+**How can we systematically evaluate and visualize inter-node bandwidth patterns in a GPU cluster without relying on administrative tools or privileges?**
+
+_NCCL Tests Cluster_ bridges this gap by automating and extending NCCL Tests for scalable, user-level performance evaluation. It enables users to:
+
+- **Automatically run pairwise NCCL benchmarks** across all node combinations
+- **Parse and summarize logs** into structured CSV/Markdown reports
+- **Visualize network topology** with bandwidth-based heatmaps and graphs
+
+Together, these capabilities extend NCCL testing into a fully automated and scalable workflow—making it easier to verify cluster health, identify communication bottlenecks, and optimize resource allocation even without system-level monitoring tools.
 
 ## Limitations
 
@@ -224,6 +241,9 @@ Run `python generate_topology.py --help` for all options.
 
 ## Troubleshooting
 
+> [!TIP]
+> If you encounter issues related to NCCL, it's highly recommended to search or ask questions on [NCCL GitHub Issues](https://github.com/NVIDIA/nccl/issues) and [NCCL Tests GitHub Issues](https://github.com/NVIDIA/nccl-tests/issues).
+
 - If single-node tests succeed but multi-node tests fail, try specifying the network interface for communication:
 
   ```bash
@@ -238,5 +258,3 @@ Run `python generate_topology.py --help` for all options.
 ## Known Issues
 
 - For large clusters, the topology becomes too crowded and hard to identify the performance differences between groups (if any). Consider splitting the cluster into smaller sub-clusters for better visualization. It is be planned to add better support for large clusters in future releases.
-
-    
