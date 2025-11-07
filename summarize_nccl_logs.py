@@ -11,17 +11,24 @@ Features
 - Infers N (nodes) and G (GPUs-per-node or GPU-group) from filename suffix "_N{N}_G{G}[_node1_node2_...].log".
   Also extracts any number of node names appended after G and shows them in a "nodes" column.
 - Includes "group" (top-level directory under root) and basename for traceability.
-- Prints a pretty aligned table; optionally saves CSV/Markdown.
+- Prints a pretty aligned table; saves CSV/Markdown.
+- Automatic failure detection and reporting:
+  * Generates failures.txt with detailed failure summary (if failures exist)
+  * Reports unique failed node pairs for topology debugging
+  * Tracks files that failed to parse
+  * Identifies tests with missing or zero bandwidth data
 
 Usage
   Single directory mode:
     python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-tests-pairs/with-debug/logs
-    -> Generates summary.csv and summary.md in with-debug/ directory
+    -> Generates summary.csv, summary.md in with-debug/ directory
+    -> Generates failures.txt if any failures detected
 
   Batch mode:
     python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-tests-pairs/
     -> Scans for with-debug/logs and without-debug/logs subdirectories
-    -> Generates summary.csv and summary.md in each parent directory
+    -> Generates summary files in each parent directory
+    -> Generates failures.txt in each directory if failures detected
 """
 
 import argparse
@@ -269,6 +276,27 @@ def save_csv(rows: List[Dict[str, object]], path: str) -> None:
             )
 
 
+def determine_status(row: Dict[str, object]) -> str:
+    """
+    Determine the status of a test based on its metrics.
+    Returns: "PASS", "FAIL", or "MISSING_DATA"
+    """
+    avg_bw = row.get("avg_bus_bw")
+    peak_bw = row.get("peak_busbw")
+
+    # Define a small threshold for considering bandwidth as zero
+    EPSILON = 1e-6
+
+    if avg_bw is None and peak_bw is None:
+        return "FAIL"
+    elif avg_bw is None or peak_bw is None:
+        return "MISSING_DATA"
+    elif (avg_bw is not None and abs(avg_bw) < EPSILON) or (peak_bw is not None and abs(peak_bw) < EPSILON):
+        return "FAIL"
+    else:
+        return "PASS"
+
+
 def save_md(rows: List[Dict[str, object]], path: str) -> None:
     headers = [
         "file",
@@ -307,26 +335,38 @@ def save_md(rows: List[Dict[str, object]], path: str) -> None:
             f.write("| " + " | ".join(row_to_list(r)) + " |\n")
 
 
-def process_logs_in_dir(root: str) -> List[Dict[str, object]]:
+def process_logs_in_dir(root: str) -> Tuple[List[Dict[str, object]], List[str]]:
     """
-    Process all logs in a directory and return parsed rows.
+    Process all logs in a directory and return parsed rows and failed files.
+    Returns: (rows, failed_files)
+    Note: Status is computed internally for failure detection but not stored in rows.
+    Note: *_debug.log files are skipped as they contain debug output, not test results.
     """
     logs = walk_logs(root)
     if not logs:
-        return []
+        return [], []
 
     rows: List[Dict[str, object]] = []
+    failed_files: List[str] = []
 
     for path in logs:
+        basename = os.path.basename(path)
+
+        # Skip *_debug.log files - they contain debug output, not test results
+        if basename.endswith("_debug.log"):
+            continue
+
         try:
             with open(path, "r", encoding="utf-8", errors="ignore") as fh:
                 text = fh.read()
         except Exception as e:
             print(f"Failed to read {path}: {e}")
+            failed_files.append(basename)
             continue
 
         sections = split_sections(text)
         if not sections:
+            failed_files.append(basename)
             continue
 
         N, G, nodes_list = infer_ng_nodes(path)
@@ -357,12 +397,94 @@ def process_logs_in_dir(root: str) -> List[Dict[str, object]]:
         )
 
     rows.sort(key=sort_key)
-    return rows
+    return rows, failed_files
 
 
-def save_results(rows: List[Dict[str, object]], output_dir: str, label: str = ""):
+def generate_failure_summary(
+    rows: List[Dict[str, object]], failed_files: List[str]
+) -> str:
+    """
+    Generate a summary of failed tests and missing data.
+    Computes status dynamically for each row.
+    """
+    # Compute status for each row dynamically
+    failed_tests = []
+    missing_data_tests = []
+    passed_tests = []
+
+    for r in rows:
+        status = determine_status(r)
+        if status == "FAIL":
+            failed_tests.append(r)
+        elif status == "MISSING_DATA":
+            missing_data_tests.append(r)
+        else:
+            passed_tests.append(r)
+
+    # Extract unique failed node pairs
+    failed_pairs = set()
+    for t in failed_tests + missing_data_tests:
+        nodes = t.get("nodes", [])
+        if nodes and len(nodes) >= 2:
+            # Sort the pair to ensure (A,B) and (B,A) are treated as the same
+            pair = tuple(sorted(nodes[:2]))  # Take first two nodes
+            failed_pairs.add(pair)
+
+    summary = []
+    summary.append("=" * 60)
+    summary.append("FAILURE SUMMARY")
+    summary.append("=" * 60)
+    summary.append(f"Total tests processed:     {len(rows)}")
+    summary.append(f"  - PASS:                  {len(passed_tests)}")
+    summary.append(f"  - FAIL:                  {len(failed_tests)}")
+    summary.append(f"  - MISSING_DATA:          {len(missing_data_tests)}")
+    summary.append(f"Files failed to parse:     {len(failed_files)}")
+    summary.append(f"Unique failed node pairs:  {len(failed_pairs)}")
+    summary.append("=" * 60)
+
+    if failed_pairs:
+        summary.append("\nUnique failed node pairs:")
+        for pair in sorted(failed_pairs):
+            summary.append(f"  - ({pair[0]}, {pair[1]})")
+
+    if failed_files:
+        summary.append("\nFiles that failed to parse:")
+        for f in failed_files:
+            summary.append(f"  - {f}")
+
+    if failed_tests:
+        summary.append("\nFailed tests (no bandwidth data):")
+        for t in failed_tests:
+            nodes_str = ",".join(t.get("nodes", [])) if t.get("nodes") else "N/A"
+            summary.append(
+                f"  - {t['file']}: {t['test']} (N={t.get('N', 'N/A')}, G={t.get('G', 'N/A')}, nodes={nodes_str})"
+            )
+
+    if missing_data_tests:
+        summary.append("\nTests with partial data (missing avg or peak bandwidth):")
+        for t in missing_data_tests:
+            nodes_str = ",".join(t.get("nodes", [])) if t.get("nodes") else "N/A"
+            missing_parts = []
+            if t.get("avg_bus_bw") is None:
+                missing_parts.append("avg_bw")
+            if t.get("peak_busbw") is None:
+                missing_parts.append("peak_bw")
+            summary.append(
+                f"  - {t['file']}: {t['test']} (N={t.get('N', 'N/A')}, G={t.get('G', 'N/A')}, nodes={nodes_str}, missing: {', '.join(missing_parts)})"
+            )
+
+    return "\n".join(summary)
+
+
+def save_results(
+    rows: List[Dict[str, object]],
+    failed_files: List[str],
+    output_dir: str,
+    label: str = "",
+):
     """
     Save results to CSV and Markdown in the specified directory.
+    Also generates and saves a failure summary if there are any failures.
     """
     if not rows:
         print(f"No logs found for {label}")
@@ -382,6 +504,26 @@ def save_results(rows: List[Dict[str, object]], output_dir: str, label: str = ""
         print(f"Saved Markdown: {md_path}")
     except Exception as e:
         print(f"Failed to save Markdown to {md_path}: {e}")
+
+    # Always check for failures and generate summary if any exist
+    has_failures = False
+    for r in rows:
+        status = determine_status(r)
+        if status in ("FAIL", "MISSING_DATA"):
+            has_failures = True
+            break
+
+    if has_failures or failed_files:
+        failures_path = os.path.join(output_dir, "failures.txt")
+        failure_summary = generate_failure_summary(rows, failed_files)
+        print("\n" + failure_summary)
+
+        try:
+            with open(failures_path, "w") as f:
+                f.write(failure_summary)
+            print(f"\nSaved failure summary: {failures_path}")
+        except Exception as e:
+            print(f"Failed to save failure summary to {failures_path}: {e}")
 
 
 # ===========================================================
@@ -418,18 +560,23 @@ def main():
     if batch_mode:
         if os.path.isdir(with_debug_logs):
             print("Processing with-debug logs:\n")
-            rows = process_logs_in_dir(with_debug_logs)
-            print(format_table(rows))
-            print()
-            save_results(rows, os.path.join(input_path, "with-debug"), "with-debug")
-            print()
-        if os.path.isdir(without_debug_logs):
-            print("Processing without-debug logs:\n")
-            rows = process_logs_in_dir(without_debug_logs)
+            rows, failed_files = process_logs_in_dir(with_debug_logs)
             print(format_table(rows))
             print()
             save_results(
-                rows, os.path.join(input_path, "without-debug"), "without-debug"
+                rows, failed_files, os.path.join(input_path, "with-debug"), "with-debug"
+            )
+            print()
+        if os.path.isdir(without_debug_logs):
+            print("Processing without-debug logs:\n")
+            rows, failed_files = process_logs_in_dir(without_debug_logs)
+            print(format_table(rows))
+            print()
+            save_results(
+                rows,
+                failed_files,
+                os.path.join(input_path, "without-debug"),
+                "without-debug",
             )
     else:
         if os.path.basename(input_path) == "logs":
@@ -437,7 +584,7 @@ def main():
         else:
             output_dir = input_path
 
-        rows = process_logs_in_dir(input_path)
+        rows, failed_files = process_logs_in_dir(input_path)
 
         if not rows:
             print("No .log files found.")
@@ -460,8 +607,20 @@ def main():
                     print(f"Saved Markdown: {args.save_md}")
                 except Exception as e:
                     print(f"Failed to save Markdown: {e}")
+
+            # Check if there are failures and print summary
+            has_failures = False
+            for r in rows:
+                status = determine_status(r)
+                if status in ("FAIL", "MISSING_DATA"):
+                    has_failures = True
+                    break
+
+            if has_failures or failed_files:
+                failure_summary = generate_failure_summary(rows, failed_files)
+                print("\n" + failure_summary)
         else:
-            save_results(rows, output_dir)
+            save_results(rows, failed_files, output_dir)
 
 
 if __name__ == "__main__":
