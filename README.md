@@ -242,18 +242,49 @@ Run `python generate_topology.py --help` for all options.
 ## Troubleshooting
 
 > [!TIP]
-> If you encounter issues related to NCCL, it's highly recommended to search or ask questions on [NCCL GitHub Issues](https://github.com/NVIDIA/nccl/issues) and [NCCL Tests GitHub Issues](https://github.com/NVIDIA/nccl-tests/issues).
+> If you encounter issues related to NCCL, it is highly recommended to search for or post your questions on [NCCL GitHub Issues](https://github.com/NVIDIA/nccl/issues) and [NCCL Tests GitHub Issues](https://github.com/NVIDIA/nccl-tests/issues).
 
-- If single-node tests succeed but multi-node tests fail, try specifying the network interface for communication:
+- If single-node tests succeed but multi-node tests fail, try specifying the network interface used for communication:
 
   ```bash
   export NCCL_SOCKET_IFNAME=<iface>
   ```
 
-- If you find red lines in the topology graphs, it indicates failed tests or missing data. Check the corresponding log files for errors.
+- If you see red lines in the topology graphs, they indicate failed tests or missing data. Check the corresponding log files for detailed error messages.
 
-  <img src="./assets/17node_cluster_topology_sendrecv_allG.png" alt="Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" width="600" />
-    <p style="font-size: 10pt">Example topology graph of an 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
+  <img src="./assets/17node_cluster_topology_sendrecv_allG.png" alt="Example topology graph of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" width="600" />
+    <p style="font-size: 10pt">Example topology graph of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
+
+- If you see multiple processes using the same Rank in the logs, ensure that you compile NCCL Tests with MPI support enabled.
+
+  ```bash
+  # Using devices
+  # nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+  # Collective test starting: alltoall_perf
+  # nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+  # Using devices
+  #  Rank  0 Group  0 Pid 223120 on cnode2-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 223121 on cnode2-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 256267 on cnode2-001 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 223123 on cnode2-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 256268 on cnode2-001 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 223122 on cnode2-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 223125 on cnode2-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 223124 on cnode2-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 256264 on cnode2-001 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 256265 on cnode2-001 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 256266 on cnode2-001 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  #  Rank  0 Group  0 Pid 256269 on cnode2-001 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+  ```
+
+  Try loading the MPI module and recompile NCCL Tests:
+
+  ```bash
+  module load openmpi
+  cd nccl/nccl-tests
+  make clean
+  make MPI=1
+  ```
 
 ## Known Issues
 
