@@ -13,14 +13,13 @@ if [ ! -d nccl ]; then
     echo "Error: NCCL repository not found!"
     exit 1
 fi
-cd nccl || exit 1
+cd nccl
 git clone https://github.com/NVIDIA/nccl-tests.git || true
 
 
 echo "====================================="
 echo "Build NCCL"
 echo "====================================="
-
 # You can also check the GPU architecture via https://developer.nvidia.com/cuda-gpus
 ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n 1 | sed 's/\.//g') # FIXME: login node might not have GPU
 echo "Detected GPU Architecture: $ARCH"
@@ -40,11 +39,22 @@ if [ ! -d nccl-tests ]; then
     echo "Error: NCCL Tests repository not found!"
     exit 1
 fi
-cd nccl-tests || exit 1
+cd nccl-tests
 
-# If This assume CUDA is installed in /usr/local/cuda, otherwise, set CUDA_HOME accordingly
-# make MPI=1 NCCL_HOME=$NCCL_HOME
+
+if command -v module >/dev/null 2>&1; then
+  if module avail openmpi 2>&1 | grep -qi openmpi; then
+    module load openmpi || true
+  else
+    echo "[WARN] No 'openmpi' module found. Install/load OpenMPI manually (e.g., 'sudo apt install openmpi-bin libopenmpi-dev' or 'module load openmpi')."
+  fi
+else
+  if ! command -v mpicc >/dev/null 2>&1; then
+    echo "[WARN] No module system and 'mpicc' not found. Install OpenMPI (e.g., 'sudo apt install openmpi-bin libopenmpi-dev')."
+  fi
+fi
+
+# make MPI=1 MPI_HOME=/path/to/mpi CUDA_HOME=/path/to/cuda NCCL_HOME=/path/to/nccl
 make MPI=1 NCCL_HOME=$NCCL_HOME CUDA_HOME=$CUDA_HOME
-# make CUDA_HOME=/path/to/cuda NCCL_HOME=/path/to/nccl
 
 cd ../.. || exit 1
