@@ -761,8 +761,9 @@ def process_multi_g(
         rows = (n + cols - 1) // cols
 
         panel_w, panel_h = dynamic_figsize(len(G_union.nodes()))
-        panel_w = max(4.0, min(8.0, panel_w * 0.9))
-        panel_h = max(4.0, min(8.0, panel_h * 0.9))
+        # Scale panels to match individual G images (remove max size cap)
+        panel_w = max(4.0, panel_w * 0.9)
+        panel_h = max(4.0, panel_h * 0.9)
 
         fig_w = cols * panel_w
         fig_h = rows * panel_h
