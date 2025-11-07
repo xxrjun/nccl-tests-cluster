@@ -16,13 +16,18 @@ Options:
   -p, --partition <PART>     Slurm partition name.
   -n, --nodelist "<string>"  Compressed nodelist to limit pairs, e.g. "cnode-[009,011-013]". If not set, all nodes in the partition are used.
   -l, --log-dir <DIR>        Directory for logs. Default: benchmarks/cluster01/nccl-tests-pairs/without-debug/logs
-      --gpn "<list>"         Space-separated GPUs-per-node list. Default: "1 2 3 4 5 6 7 8"
+      --gpn "<list>"         Space-separated GPUs-per-node list. Default: "1 2 4 8"
       --dry-run              Show commands without executing them
       --debug                Enable NCCL debug mode (may affect performance)
   -h, --help                 Show this help
 
 Environment:
-  NCCL_TEST                  Path to nccl-tests repo
+  NCCL_HOME                  Path to NCCL installation (default: $HOME/nccl-tests-cluster/nccl/build)
+  NCCL_TEST                  Path to nccl-tests repo (default: $HOME/nccl-tests-cluster/nccl/nccl-tests)
+  LD_LIBRARY_PATH            Path to CUDA libraries (default: $HOME/nccl-tests-cluster/nccl/build/lib)
+
+  (optional) NCCL_SOCKET_IFNAME  Specify network interface for NCCL communication.
+  (optional) NCCL_IB_HCA         Specify InfiniBand HCA for NCCL
 
 USAGE
 }
@@ -60,7 +65,7 @@ done
 
 PARTITION=${PARTITION:-}
 NODELIST=${NODELIST:-}
-GPN_LIST=${GPN_LIST:-"1 2 3 4 5 6 7 8"}
+GPN_LIST=${GPN_LIST:-"1 2 4 8"}
 CPUS_PER_TASK=${CPUS_PER_TASK:-2}
 
 DEBUG=${DEBUG:-0} # WARN: may affect performance results
