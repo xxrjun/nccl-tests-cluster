@@ -15,12 +15,16 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 
 **Key Features:**
 
-- Run pairwise NCCL tests across all node combinations
+- Run single-node [NCCL tests](https://github.com/NVIDIA/nccl-tests) for intra-node performance evaluation
+- Run pairwise NCCL tests across all node combinations for inter-node evaluation
 - Parse logs and generate summary reports (CSV/Markdown)
 - Visualize network topology with bandwidth graphs
-- Support for SLURM clusters
+- Support for [SLURM](https://slurm.schedmd.com/documentation.html) clusters
 
-**Testing Strategy:** For N nodes, test all pairs (e.g., 4 nodes → 6 pairs: A-B, A-C, A-D, B-C, B-D, C-D). Intra-node tests should be run separately on each node.
+**Testing Strategy:**
+
+- **Single-node tests**: Evaluate intra-node GPU communication performance on each node individually
+- **Pairwise tests**: For N nodes, test all pairs (e.g., 4 nodes → 6 pairs: A-B, A-C, A-D, B-C, B-D, C-D) to evaluate inter-node communication
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -31,7 +35,8 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
   - [Clone Repository and Build NCCL](#clone-repository-and-build-nccl)
   - [Python Environment](#python-environment)
 - [Usage](#usage)
-  - [Run NCCL Tests Pairs](#run-nccl-tests-pairs)
+  - [Run NCCL Tests (Single-Node)](#run-nccl-tests-single-node)
+  - [Run NCCL Tests (Pairs)](#run-nccl-tests-pairs)
   - [Summarize Logs](#summarize-logs)
   - [Generate Topology Graphs](#generate-topology-graphs)
 - [Useful Links](#useful-links)
@@ -40,7 +45,7 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 
 ## Motivation
 
-[NVIDIA’s NCCL Tests](https://github.com/NVIDIA/nccl-tests) already provides a reliable and privilege-free way to benchmark GPU communication performance. However, in real-world HPC or cloud environments, users without administrative access often face limited visibility into the system. Tools such as **NVIDIA DCGM**, **nvtop**, or low-level network profilers are typically unavailable, making it difficult to obtain a clear picture of inter-node communication performance.
+**[NVIDIA’s NCCL Tests](https://github.com/NVIDIA/nccl-tests)** already provides a reliable and privilege-free way to benchmark GPU communication performance. However, in real-world HPC or cloud environments, users without administrative access often face limited visibility into the system. Tools such as [NVIDIA DCGM](https://developer.nvidia.com/dcgm) or low-level network profilers are typically unavailable, making it difficult to obtain a clear picture of inter-node communication performance.
 
 This raises a practical challenge:
 
@@ -56,7 +61,7 @@ Together, these capabilities extend NCCL testing into a fully automated and scal
 
 ## Limitations
 
-- **Scheduler**: Only [SLURM](https://slurm.schedmd.com/documentation.html) is supported currently
+- **Scheduler**: Only SLURM is supported currently
 - **GPU/NIC Selection**:
   - No automatic testing of all GPU/NIC combinations
   - Manual configuration via environment variables (e.g., `CUDA_VISIBLE_DEVICES`, NCCL variables) is possible
@@ -67,12 +72,20 @@ Together, these capabilities extend NCCL testing into a fully automated and scal
 
 ```bash
 build_nccl_and_tests.sh
-sbatch_run_nccl_tests_pairs.sh
+sbatch_run_nccl_tests_single.sh    # Single-node testing script
+sbatch_run_nccl_tests_pairs.sh     # Pairwise testing script
 summarize_nccl_logs.py
 generate_topology.py
-benchmarks
-  {cluster_name}/         # e.g., cluster00: 8 nodes × 8 H100 GPUs each
-    nccl-tests-pairs/
+benchmarks/
+  {cluster_name}/                  # e.g., cluster01: 8 nodes × 8 H100 GPUs each
+    nccl-tests-single/             # Single-node test results
+      with-debug/
+        logs/
+        summary.csv
+        summary.md
+      without-debug/
+        (same as above)
+    nccl-tests-pairs/              # Pairwise test results
       with-debug/
         logs/
         topology/
@@ -85,9 +98,9 @@ benchmarks
         (same as above)
   {cluster_name2}/
 nccl/
-  build/                  # Compiled NCCL library (NCCL_HOME)
+  build/                           # Compiled NCCL library (NCCL_HOME)
   nccl-tests/
-    build/                # Compiled NCCL test binaries (NCCL_TEST)
+    build/                         # Compiled NCCL test binaries (NCCL_TEST)
 ```
 
 ## Prerequisites
@@ -140,55 +153,144 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Run NCCL Tests Pairs
+### Run NCCL Tests (Single-Node)
 
-View all options to use CLI script.
+> Plotting feature is ongoing for single-node tests.
+
+Test intra-node GPU communication performance on individual nodes.
+
+**View help:**
 
 ```bash
-bash sbatch_run_nccl_tests_pairs.sh --help
+bash sbatch_run_nccl_tests_single.sh --help
 ```
 
-Or modify the **SLURM and Test Settings** section in the script to configure partition, nodes, GPUs, and test parameters as needed. Then run the script to submit jobs.
-
-> It is highly recommended to use only two nodes to verify that your NCCL environment is working correctly.
+**Basic usage:**
 
 ```bash
-bash sbatch_run_nccl_tests_pairs.sh
+# Test all nodes in a partition with default GPU counts (4, 8)
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01
+
+# Test specific nodes
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 -n "cnode-[001-004]"
+
+# Custom GPU counts
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 --gpn "2 4 8"
+
+# Dry run (preview without submitting)
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 --dry-run
+
+# Enable debug mode
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 --debug
 ```
 
-After execution, you should see a summary table similar to the following:
+**Example output:**
 
 ```bash
+Submitting 4 single-node jobs...
+  cnode-001
+  cnode-002
+  cnode-003
+  cnode-004
+Submit: NCCL_N1_G4_cnode-001  --nodelist=cnode-001  --gpus-per-node=4
+Submitted batch job 1234
 # ...
-Submitted batch job 1215
-Submitted 1088 jobs. (0 skipped due to existing logs.)
-Total pairs: 136. Total jobs: 1088.
 ==========================================
 Submission Summary
 ==========================================
-Total pairs:    136
-Jobs per pair:  8
-Total jobs:     1088
-Submitted:      1088
+Total nodes:    4
+Jobs per node:  2
+Total jobs:     8
+Submitted:      8
 Skipped:        0
 DRY RUN:        0
 NCCL DEBUG:     0
 ==========================================
 ```
 
-If necessary, you can cancel all running jobs using the following command
+### Run NCCL Tests (Pairs)
+
+Test inter-node GPU communication performance across all node pairs.
+
+**View help:**
+
+```bash
+bash sbatch_run_nccl_tests_pairs.sh --help
+```
+
+**Basic usage:**
+
+```bash
+# Test all node pairs in a partition with default GPU counts (1, 2, 4, 8)
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01
+
+# Test specific nodes
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 -n "cnode-[001-004]"
+
+# Custom GPU counts
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 --gpn "2 4 8"
+
+# Dry run (preview without submitting)
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 --dry-run
+
+# Enable debug mode
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 --debug
+```
+
+> [!TIP]
+> It is highly recommended to first test with only two nodes to verify that your NCCL environment is working correctly:
+>
+> ```bash
+> bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 -n "cnode-[001-002]"
+> ```
+
+**Example output:**
+
+```bash
+Submitting 6 pairs...
+  cnode-001,cnode-002
+  cnode-001,cnode-003
+  # ...
+==========================================
+Submission Summary
+==========================================
+Total pairs:    6
+Jobs per pair:  4
+Total jobs:     24
+Submitted:      24
+Skipped:        0
+DRY RUN:        0
+NCCL DEBUG:     0
+==========================================
+```
+
+**Cancel jobs if needed:**
 
 ```bash
 scancel -u $USER
 ```
+
+**Common CLI Options:**
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-p, --partition` | SLURM partition name | Required |
+| `-c, --cluster` | Cluster name for log organization | `cluster01` |
+| `-n, --nodelist` | Compressed nodelist (e.g., `"cnode-[001-004]"`) | All nodes in partition |
+| `-l, --log-dir` | Custom log directory | `benchmarks/<CLUSTER>/nccl-tests-{single\|pairs}/without-debug/logs` |
+| `--gpn` | Space-separated GPU counts | Single: `"4 8"`, Pairs: `"1 2 4 8"` |
+| `--dry-run` | Preview commands without submitting | `false` |
+| `--debug` | Enable NCCL debug mode (affects performance) | `false` |
 
 ### Summarize Logs
 
 Parse NCCL test logs and generate summary reports (CSV + Markdown).
 
 ```bash
-# Process single directory
-python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-tests-pairs/with-debug/logs
+# Process single-node test logs
+python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-tests-single/without-debug/logs
+
+# Process pairwise test logs
+python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-tests-pairs/without-debug/logs
 
 # Batch mode: process both with-debug/ and without-debug/
 python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-tests-pairs/
@@ -200,9 +302,10 @@ python summarize_nccl_logs.py \
   --save-md  /path/to/summary.md
 ```
 
-**Filename Format:** `..._N{N}_G{G}_node1_node2.log`
+**Filename Format:**
 
-- Example: `nccl_N2_G8_cnode4-005_cnode4-006.log`
+- Single-node: `..._N1_G{G}_node.log` (e.g., `nccl_N1_G8_cnode-001.log`)
+- Pairs: `..._N2_G{G}_node1_node2.log` (e.g., `nccl_N2_G8_cnode-005_cnode-006.log`)
 - The `_debug` suffix is automatically ignored
 
 ### Generate Topology Graphs
