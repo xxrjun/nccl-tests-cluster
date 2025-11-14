@@ -70,37 +70,36 @@ Together, these capabilities extend NCCL testing into a fully automated and scal
 
 ## Project Structure
 
+This structure allows users to easily manage benchmark results across multiple clusters, with each cluster maintaining its own NCCL test logs and summaries. Additional documents or scripts related to specific clusters—such as hardware specifications or other types of benchmarks—can also be included as needed.
+
 ```bash
-build_nccl_and_tests.sh
-sbatch_run_nccl_tests_single.sh    # Single-node testing script
-sbatch_run_nccl_tests_pairs.sh     # Pairwise testing script
-summarize_nccl_logs.py
-generate_topology.py
 benchmarks/
-  {cluster_name}/                  # e.g., cluster01: 8 nodes × 8 H100 GPUs each
-    nccl-tests-single/             # Single-node test results
-      with-debug/
-        logs/
-        summary.csv
-        summary.md
-      without-debug/
+  {cluster_name}/                    # e.g., cluster01: 8 nodes × 8 H100 GPUs each
+    nccl-benchmark-results/
+      single-node/                   # Single node test results
+        with-debug/
+          logs/
+          summary.csv
+          summary.md
+        without-debug/
+          (same as above)
+      multi-node/                   # Multi-node test results
         (same as above)
-    nccl-tests-pairs/              # Pairwise test results
-      with-debug/
-        logs/
-        topology/
-          alltoall_perf/
-          sendrecv_perf/
-          ... (others)
-        summary.csv
-        summary.md
-      without-debug/
-        (same as above)
+      pairwise/                     # Pairwise test results
+        with-debug/
+          logs/
+          topology/
+          summary.csv
+          summary.md
+        without-debug/
+          (same as above)
+    # ... others documents/scripts of this cluster
   {cluster_name2}/
 nccl/
   build/                           # Compiled NCCL library (NCCL_HOME)
   nccl-tests/
     build/                         # Compiled NCCL test binaries (NCCL_TEST)
+# ... scripts
 ```
 
 ## Prerequisites
@@ -287,13 +286,13 @@ Parse NCCL test logs and generate summary reports (CSV + Markdown).
 
 ```bash
 # Process single-node test logs
-python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-tests-single/without-debug/logs
+python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-benchmark-results/single-node/without-debug/logs
 
 # Process pairwise test logs
-python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-tests-pairs/without-debug/logs
+python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-benchmark-results/pairwise/without-debug/logs
 
 # Batch mode: process both with-debug/ and without-debug/
-python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-tests-pairs/
+python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-benchmark-results/pairwise/
 
 # Custom output paths
 python summarize_nccl_logs.py \
@@ -314,7 +313,7 @@ Visualize network topology with bandwidth heatmaps from `summary.csv`.
 
 ```bash
 # Process all tests and G values (recommended)
-python generate_topology.py --csv benchmarks/cluster01/nccl-tests-pairs/without-debug/summary.csv --all
+python generate_topology.py --csv benchmarks/cluster01/nccl-benchmark-results/pairwise/without-debug/summary.csv --all
 
 # Single test, all G values
 python generate_topology.py --csv ./summary.csv --test alltoall_perf

@@ -16,7 +16,7 @@ Options:
   -p, --partition <PART>     Slurm partition name.
   -c, --cluster <NAME>       Cluster name for organizing logs. Default: cluster01
   -n, --nodelist "<string>"  Compressed nodelist to limit pairs, e.g. "cnode-[009,011-013]". If not set, all nodes in the partition are used.
-  -l, --log-dir <DIR>        Directory for logs. Default: benchmarks/<CLUSTER>/nccl-tests-pairs/without-debug/logs
+  -l, --log-dir <DIR>        Directory for logs. Default: benchmarks/<CLUSTER>/nccl-benchmark-results/pairwise/without-debug/logs
       --gpn "<list>"         Space-separated GPUs-per-node list. Default: "1 2 4 8"
       --dry-run              Show commands without executing them
       --debug                Enable NCCL debug mode (may affect performance)
@@ -77,9 +77,9 @@ DEBUG=${DEBUG:-0} # WARN: may affect performance results
 DRY_RUN=${DRY_RUN:-0}
 
 if [[ $DEBUG -eq 1 ]]; then
-  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-tests-pairs/with-debug/logs"}
+  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results/pairwise/with-debug/logs"}
 else
-  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-tests-pairs/without-debug/logs"}
+  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results/pairwise/without-debug/logs"}
 fi
 mkdir -p "${LOG_DIR}"
 
@@ -104,10 +104,10 @@ WARMUP_ITERS=5
 RUN_BIN=(
     alltoall_perf
     sendrecv_perf
-
-    # all_reduce_perf
-    # all_gather_perf
-    # reduce_scatter_perf
+    all_reduce_perf
+    all_gather_perf
+    reduce_scatter_perf
+    
     # broadcast_perf
     # reduce_perf
 )
@@ -122,7 +122,8 @@ if [[ "$DEBUG" -eq 1 ]]; then
   echo "NCCL DEBUG: Enabled"
 
   # WARN: NCCL debug env vars may affect performance results
-  export NCCL_DEBUG=INFO 
+  export NCCL_DEBUG=INFO # Normally, we only need to print debug information.
+  # export NCCL_DEBUG=TRACE # Prints replayable trace information on every call. 
   export NCCL_DEBUG_SUBSYS=ALL,^CALL,^PROXY
  
   # question about adaptive routing: https://github.com/NVIDIA/nccl/issues/1687
