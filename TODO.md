@@ -20,22 +20,22 @@
 
 ## Enhancements
 
-- [ ] refactor: file structure
+- [x] refactor: benchmarks file structure
 
   ```bash
   benchmarks/
-  {cluster_name}/                  # e.g., cluster01: 8 nodes × 8 H100 GPUs each
-    nccl-benchmarks-results/
-      single-node/                   # Single-node test results
+  {cluster_name}/                    # e.g., cluster01: 8 nodes × 8 H100 GPUs each
+    nccl-benchmark-results/
+      single-node/                   # Single node test results
         with-debug/
           logs/
           summary.csv
           summary.md
         without-debug/
           (same as above)
-      multi-node/
+      multi-node/                   # Multi-node test results
         (same as above)
-      pairwise/              # Pairwise test results
+      pairwise/                     # Pairwise test results
         with-debug/
           logs/
           topology/
@@ -48,8 +48,6 @@
     ...
   ```
 
-  - `benchmark/` or `clusters/` as the root directory to store all benchmark results?
-
 - [x] feat: summarize failed tests or missing data into `failures.txt` using `summarize_nccl_logs.py`
 
   - list unique failed node pairs
@@ -57,6 +55,15 @@
 - [ ] feat: better visualization for larger clusters (e.g., N>17)
 
 - [ ] docs: add more usage examples and troubleshooting tips
+
+## Documentation
+
+- [ ] docs: how to evaluate whether the benchmark results are reasonable
+
+  - what should be the expected performance ranges for different interconnects (e.g., NVLink, PCIe, InfiniBand)
+  - what to look for in the performance numbers
+  - common anomalies and their possible causes
+  - next steps if anomalies are detected
 
 ## Discussion
 
