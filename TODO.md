@@ -18,7 +18,13 @@
   - organize logs by cluster name
   - parse logs to csv/markdown table (no topology visualization)
 
+- [ ] feat: plotting across multiple messages sizes
+
 ## Enhancements
+
+- [ ] Better structure for benchmarks results
+
+  - timestamped folders for different runs with resume capability
 
 - [x] refactor: benchmarks file structure
 
@@ -56,6 +62,14 @@
 
 - [ ] docs: add more usage examples and troubleshooting tips
 
+- [ ] feat: add torch nccl benchmark script
+
+  - similar to nccl-tests but using PyTorch's distributed package, which is easier to setup.
+
+- [ ] feat: specify NICs to use for tests (e.g., for nodes with multiple NICs)
+
+- [x] feat: slurm timeout control
+
 ## Documentation
 
 - [ ] docs: how to evaluate whether the benchmark results are reasonable
@@ -64,6 +78,10 @@
   - what to look for in the performance numbers
   - common anomalies and their possible causes
   - next steps if anomalies are detected
+
+- [ ] docs: add related sources
+
+  - https://github.com/stas00/ml-engineering/tree/master/network/benchmarks
 
 ## Discussion
 

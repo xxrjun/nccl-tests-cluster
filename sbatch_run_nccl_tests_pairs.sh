@@ -81,7 +81,9 @@ if [[ $DEBUG -eq 1 ]]; then
 else
   LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results/pairwise/without-debug/logs"}
 fi
-mkdir -p "${LOG_DIR}"
+[[ "$DRY_RUN" -eq 1 ]] || mkdir -p "${LOG_DIR}"
+
+JOB_TIME_LIMIT=${JOB_TIME_LIMIT:-"02:30:00"}
 
 # =============================================================
 # NCCL Tests Settings
@@ -187,7 +189,7 @@ for pair in "${pairs[@]}"; do
       continue
     fi
 
-    if [[ "$DEBUG" -eq 1 ]]; then
+    if [[ "$DEBUG" -eq 1 && "$DRY_RUN" -eq 0 ]]; then
       export NCCL_DEBUG_FILE="${log}_debug.log"
     fi
 
@@ -207,46 +209,33 @@ for pair in "${pairs[@]}"; do
       nccl_cmd+=" --maxbytes ${MAXIMUM_TRANSFER_SIZE}"
       nccl_cmd+="; "
     done
+    nccl_cmd=${nccl_cmd%"; "}
+
+    sbatch_args=(
+      -J "${job}"
+      -p "${PARTITION}"
+      -N 2
+      --nodelist="${A},${B}"
+      --gpus-per-node="${gpn}"
+      --ntasks-per-node="${gpn}"
+      --cpus-per-task="${CPUS_PER_TASK:-2}"
+      -o "${log}.log"
+      -e "${log}.err"
+      --wrap "${nccl_cmd}"
+    )
+    if [[ -n "${JOB_TIME_LIMIT:-}" ]]; then
+      sbatch_args+=(--time "${JOB_TIME_LIMIT}")
+    fi
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
       echo "=========================================="
-      echo "DRY RUN: Would execute the following sbatch command:"
-      echo ""
-      echo "sbatch \\"
-      echo "  -J \"${job}\" \\"
-      echo "  -p \"${PARTITION}\" \\"
-      echo "  -N 2 \\"
-      echo "  --nodelist=\"${A},${B}\" \\"
-      echo "  --gpus-per-node=\"${gpn}\" \\"
-      echo "  --ntasks-per-node=\"${gpn}\" \\"
-      echo "  -o \"${log}.log\" \\"
-      echo "  -e \"${log}.err\" \\"
-      echo "  --wrap=\\"
-      echo ""
-      for bin in "${RUN_BIN[@]}"; do
-        echo "srun ${NCCL_TEST}/build/${bin} \\"
-        echo "  --iters ${ITERS_COUNT} \\"
-        echo "  --warmup_iters ${WARMUP_ITERS} \\"
-        echo "  -f ${STEP_FACTOR} \\"
-        echo "  --datatype double \\"
-        echo "  --minbytes ${MINIMUM_TRANSFER_SIZE} \\"
-        echo "  --maxbytes ${MAXIMUM_TRANSFER_SIZE}"
-        echo ""
-      done
+      echo "DRY RUN: sbatch --test-only preview (no submission):"
+      printf 'sbatch --test-only %q ' "${sbatch_args[@]}"; echo
+      sbatch --test-only "${sbatch_args[@]}"
       echo "=========================================="
       echo ""
     else
-      sbatch \
-        -J "${job}" \
-        -p "${PARTITION}" \
-        -N 2 \
-        --nodelist="${A},${B}" \
-        --gpus-per-node="${gpn}" \
-        --ntasks-per-node="${gpn}" \
-        --cpus-per-task="${CPUS_PER_TASK:-2}" \
-        -o "${log}.log" \
-        -e "${log}.err" \
-        --wrap="${nccl_cmd}"
+      sbatch "${sbatch_args[@]}"
     fi
 
     ((NUM_SUBMIT++))
