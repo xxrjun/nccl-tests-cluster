@@ -16,7 +16,8 @@ Options:
   -p, --partition <PART>     Slurm partition name.
   -c, --cluster <NAME>       Cluster name for organizing logs. Default: cluster01
   -n, --nodelist "<string>"  Compressed nodelist to limit pairs, e.g. "cnode-[009,011-013]". If not set, all nodes in the partition are used.
-  -l, --log-dir <DIR>        Directory for logs. Default: benchmarks/<CLUSTER>/nccl-benchmark-results/pairwise/without-debug/logs
+  -r, --run-id <ID>          Run ID for timestamped results. Default: YYYYMMDD-HHMMSS
+  -l, --log-dir <DIR>        Directory for logs. Default: benchmarks/<CLUSTER>/nccl-benchmark-results/runs/<RUN_ID>/pairwise/without-debug/logs
       --gpn "<list>"         Space-separated GPUs-per-node list. Default: "1 2 4 8"
       --dry-run              Show commands without executing them
       --debug                Enable NCCL debug mode (may affect performance)
@@ -44,9 +45,12 @@ while [[ $# -gt 0 ]]; do
     -n|--nodelist)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
       NODELIST="$2"; shift 2;;
+    -r|--run-id)
+      [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
+      RUN_ID="$2"; shift 2;;
     -l|--log-dir)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
-      LOG_DIR="$2"; shift 2;;
+      LOG_DIR="$2"; LOG_DIR_SET=1; shift 2;;
     --gpn)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
       GPN_LIST="$2"; shift 2;;
@@ -72,16 +76,22 @@ CLUSTER_NAME=${CLUSTER_NAME:-cluster01}
 NODELIST=${NODELIST:-}
 GPN_LIST=${GPN_LIST:-"1 2 4 8"}
 CPUS_PER_TASK=${CPUS_PER_TASK:-2}
+RUN_ID=${RUN_ID:-$(date +%Y%m%d-%H%M%S)}
+RESULTS_DIR=${RESULTS_DIR:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results/runs/$RUN_ID"}
+LOG_DIR_SET=${LOG_DIR_SET:-0}
 
 DEBUG=${DEBUG:-0} # WARN: may affect performance results
 DRY_RUN=${DRY_RUN:-0}
 
 if [[ $DEBUG -eq 1 ]]; then
-  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results/pairwise/with-debug/logs"}
+  LOG_DIR=${LOG_DIR:-"$RESULTS_DIR/pairwise/with-debug/logs"}
 else
-  LOG_DIR=${LOG_DIR:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results/pairwise/without-debug/logs"}
+  LOG_DIR=${LOG_DIR:-"$RESULTS_DIR/pairwise/without-debug/logs"}
 fi
 [[ "$DRY_RUN" -eq 1 ]] || mkdir -p "${LOG_DIR}"
+if [[ "$DRY_RUN" -eq 0 && "$LOG_DIR_SET" -eq 0 ]]; then
+  ln -sfn "$RESULTS_DIR" "benchmarks/$CLUSTER_NAME/nccl-benchmark-results/latest"
+fi
 
 JOB_TIME_LIMIT=${JOB_TIME_LIMIT:-"02:30:00"}
 
