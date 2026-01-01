@@ -16,15 +16,20 @@
 - [ ] feat: single node nccl-tests script `sbatch_run_nccl_tests_single.sh`
 
   - organize logs by cluster name
-  - parse logs to csv/markdown table (no topology visualization)
+  - parse logs to csv/markdown table
+  - plots
+    - x-axis: message size
+    - y-axis: bandwidth
+    - each node has single plot, also combined plot for all nodes with different lines
 
 - [ ] feat: plotting across multiple messages sizes
 
 ## Enhancements
 
-- [ ] Better structure for benchmarks results
+- [x] Design a better file structure for benchmarks results
 
-  - timestamped folders for different runs with resume capability
+  - timestamped folders for different runs with resume capability, or better version control.
+  - At the moment, the archive folder is managed manually, which is not very convenient.
 
 - [x] refactor: benchmarks file structure
 
@@ -60,6 +65,9 @@
 
 - [ ] feat: better visualization for larger clusters (e.g., N>17)
 
+  - [x] heatmap
+  - [ ] interactive 3D visualization
+
 - [ ] docs: add more usage examples and troubleshooting tips
 
 - [ ] feat: add torch nccl benchmark script
@@ -81,7 +89,8 @@
 
 - [ ] docs: add related sources
 
-  - https://github.com/stas00/ml-engineering/tree/master/network/benchmarks
+  - [Networking Benchmarks | Stas00](https://github.com/stas00/ml-engineering/tree/master/network/benchmarks)
+  - [coreweave/nccl-tests](https://github.com/coreweave/nccl-tests) - NVIDIA NCCL Tests for Distributed Training
 
 ## Discussion
 

@@ -1,0 +1,33 @@
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 367186 on cnode2-003 device  0 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 350158 on cnode2-008 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       2097152    double    none      -1  1286.53   26.08   13.04       0  1274.91   26.32   13.16    N/A
+    67108864       4194304    double    none      -1  2511.15   26.72   13.36       0  2512.97   26.70   13.35    N/A
+   134217728       8388608    double    none      -1  4981.22   26.94   13.47       0  4990.81   26.89   13.45    N/A
+   268435456      16777216    double    none      -1  9921.50   27.06   13.53       0  9932.75   27.03   13.51    N/A
+   536870912      33554432    double    none      -1  19812.2   27.10   13.55       0  19815.8   27.09   13.55    N/A
+  1073741824      67108864    double    none      -1  39596.7   27.12   13.56       0  39618.4   27.10   13.55    N/A
+  2147483648     134217728    double    none      -1  79173.6   27.12   13.56       0  79192.3   27.12   13.56    N/A
+  4294967296     268435456    double    none      -1   158331   27.13   13.56       0   158298   27.13   13.57    N/A
+  8589934592     536870912    double    none      -1   316911   27.11   13.55       0   316929   27.10   13.55    N/A
+ 17179869184    1073741824    double    none      -1   633962   27.10   13.55       0   631227   27.22   13.61    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 13.4796 
+#
+# Collective test concluded: alltoall_perf
+
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: sendrecv_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 367935 on cnode2-003 device  0 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 350956 on cnode2-008 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3

@@ -20,12 +20,12 @@ Features
 
 Usage
   Single directory mode:
-    python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/pairwise/with-debug/logs
+    python summarize_nccl_logs.py --input benchmarks/example-cluster00/nccl-benchmark-results/latest/pairwise/with-debug/logs
     -> Generates summary.csv, summary.md in with-debug/ directory
     -> Generates failures.txt if any failures detected
 
   Batch mode:
-    python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/pairwise/
+    python summarize_nccl_logs.py --input benchmarks/example-cluster00/nccl-benchmark-results/latest/pairwise/
     -> Scans for with-debug/logs and without-debug/logs subdirectories
     -> Generates summary files in each parent directory
     -> Generates failures.txt in each directory if failures detected

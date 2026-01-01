@@ -161,6 +161,24 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Enable automatic label adjustment to avoid overlaps. May move labels away from edge centers.",
     )
+    p.add_argument(
+        "--heatmap",
+        dest="heatmap",
+        action="store_true",
+        default=True,
+        help="Also emit NxN bandwidth heatmap PNG(s). (default: enabled)",
+    )
+    p.add_argument(
+        "--no-heatmap",
+        dest="heatmap",
+        action="store_false",
+        help="Disable heatmap output.",
+    )
+    p.add_argument(
+        "--heatmap-only",
+        action="store_true",
+        help="Emit only heatmap PNG(s) (skip topology graph). Implies --heatmap.",
+    )
     return p.parse_args()
 
 
@@ -171,6 +189,8 @@ def validate_args(args: argparse.Namespace) -> None:
             raise ValueError("--vmin must be less than --vmax")
     if args.dpi <= 0:
         raise ValueError("--dpi must be positive")
+    if args.heatmap_only:
+        args.heatmap = True
 
     # Determine mode
     if args.test is None and args.g is None and not args.all:
@@ -327,6 +347,29 @@ def build_graph(agg_df: pd.DataFrame) -> nx.Graph:
     return G
 
 
+def build_bw_matrix(
+    agg_df: pd.DataFrame, nodes: List[str]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Return (z, customdata) matrices for an NxN heatmap."""
+    n = len(nodes)
+    idx = {node: i for i, node in enumerate(nodes)}
+    z = np.full((n, n), np.nan, dtype=float)
+    custom = np.full((n, n), "missing", dtype=object)
+
+    for _, row in agg_df.iterrows():
+        i = idx[row["node_a"]]
+        j = idx[row["node_b"]]
+        bw = float(row["avg_bus_bw_GBs"])
+        z[i, j] = bw
+        z[j, i] = bw
+        custom[i, j] = f"{bw:.2f} GB/s"
+        custom[j, i] = f"{bw:.2f} GB/s"
+
+    for i in range(n):
+        custom[i, i] = "self"
+    return z, custom
+
+
 # ===========================================================
 # Drawing
 # ===========================================================
@@ -363,6 +406,56 @@ def add_colorbar(
     cbar = fig.colorbar(sm, ax=ax, **kwargs)
     cbar.set_label(label)
     return cbar
+
+
+def dynamic_heatmap_figsize(n_nodes: int) -> Tuple[float, float]:
+    base = 6.0
+    size = max(base, min(0.35 * n_nodes, 40.0))
+    return (size, size)
+
+
+def heatmap_label_step(n_nodes: int) -> int:
+    if n_nodes <= 20:
+        return 1
+    if n_nodes <= 40:
+        return 2
+    if n_nodes <= 80:
+        return 4
+    return 6
+
+
+def draw_heatmap_ax(
+    z: np.ndarray,
+    nodes: List[str],
+    ax: plt.Axes,
+    *,
+    vmin: float,
+    vmax: float,
+    title: Optional[str] = None,
+):
+    ax.set_aspect("equal")
+    n = len(nodes)
+    cmap = get_trimmed_colormap()
+    if hasattr(cmap, "copy"):
+        cmap = cmap.copy()
+    cmap.set_bad(color="lightgray")
+
+    z_masked = np.ma.masked_invalid(z)
+    im = ax.imshow(z_masked, vmin=vmin, vmax=vmax, cmap=cmap, interpolation="none")
+
+    step = heatmap_label_step(n)
+    ticks = np.arange(0, n, step)
+    ax.set_xticks(ticks)
+    ax.set_yticks(ticks)
+
+    font_size = 8 if n <= 30 else 6 if n <= 60 else 5
+    ax.set_xticklabels([nodes[i] for i in ticks], rotation=90, fontsize=font_size)
+    ax.set_yticklabels([nodes[i] for i in ticks], fontsize=font_size)
+
+    if title:
+        ax.set_title(title, fontsize=11, pad=10)
+
+    return im
 
 
 def draw_topology_ax(
@@ -592,6 +685,24 @@ def get_output_paths(
         raise ValueError("Either g or combined must be specified")
 
 
+def get_output_paths_heatmap(
+    base_dir: pathlib.Path, test_name: str, g: Optional[int] = None
+) -> pathlib.Path:
+    test_dir = base_dir / test_name
+    test_dir.mkdir(parents=True, exist_ok=True)
+    if g is None:
+        raise ValueError("g must be specified for heatmap output")
+    return test_dir / f"G{g}_heatmap.png"
+
+
+def get_output_paths_heatmap_combined(
+    base_dir: pathlib.Path, test_name: str
+) -> pathlib.Path:
+    test_dir = base_dir / test_name
+    test_dir.mkdir(parents=True, exist_ok=True)
+    return test_dir / "allG_heatmap.png"
+
+
 # ===========================================================
 # Processing logic
 # ===========================================================
@@ -613,6 +724,7 @@ def process_single_g(
         return
 
     agg = aggregate_links(filtered)
+    nodes = sorted(set(agg["node_a"]).union(set(agg["node_b"])))
     Gx = build_graph(agg)
     pos = pick_layout(Gx, args.layout, args.seed)
 
@@ -628,6 +740,30 @@ def process_single_g(
     if math.isclose(vmin, vmax, rel_tol=1e-12, abs_tol=1e-12):
         vmin -= 0.5
         vmax += 0.5
+
+    if args.heatmap:
+        z, _ = build_bw_matrix(agg, nodes)
+        fig, ax = plt.subplots(
+            figsize=dynamic_heatmap_figsize(len(nodes)), dpi=args.dpi
+        )
+        draw_heatmap_ax(
+            z,
+            nodes,
+            ax,
+            vmin=vmin,
+            vmax=vmax,
+            title=(
+                args.title if args.title else f"{test_name} — heatmap, N=2, G={g_value}"
+            ),
+        )
+        add_colorbar(fig, ax, vmin, vmax, fraction=0.046, pad=0.04)
+        heatmap_path = output_path.with_name(f"{output_path.stem}_heatmap.png")
+        fig.tight_layout()
+        fig.savefig(heatmap_path, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {heatmap_path}")
+        if args.heatmap_only:
+            return
 
     figsize = dynamic_figsize(len(Gx.nodes()))
     fig, ax = plt.subplots(figsize=figsize, dpi=args.dpi)
@@ -717,6 +853,114 @@ def process_multi_g(
         global_scale=global_scale,
     )
 
+    # Emit heatmaps (per-G)
+    if args.heatmap:
+        for g in g_values_with_data:
+            agg = agg_per_g[g]
+            nodes = sorted(set(agg["node_a"]).union(set(agg["node_b"])))
+            z, _ = build_bw_matrix(agg, nodes)
+            if vmin_glob is None or vmax_glob is None:
+                vmin, vmax = perG_minmax[g]
+                if math.isclose(vmin, vmax, rel_tol=1e-12, abs_tol=1e-12):
+                    vmin -= 0.5
+                    vmax += 0.5
+            else:
+                vmin, vmax = vmin_glob, vmax_glob
+
+            fig, ax = plt.subplots(
+                figsize=dynamic_heatmap_figsize(len(nodes)), dpi=args.dpi
+            )
+            draw_heatmap_ax(
+                z,
+                nodes,
+                ax,
+                vmin=vmin,
+                vmax=vmax,
+                title=f"{test_name} — heatmap, N=2, G={g}",
+            )
+            add_colorbar(fig, ax, vmin, vmax, fraction=0.046, pad=0.04)
+
+            out_path = get_output_paths_heatmap(base_dir, test_name, g=g)
+            fig.tight_layout()
+            fig.savefig(out_path, bbox_inches="tight")
+            plt.close(fig)
+            print(f"  Saved: {out_path}")
+
+        # Combined heatmap grid
+        if len(g_values_with_data) > 1:
+            n = len(g_values_with_data)
+            cols = max(1, int(args.combine_cols))
+            cols_eff = min(cols, n)
+            rows = (n + cols_eff - 1) // cols_eff
+
+            panel_w, panel_h = dynamic_heatmap_figsize(len(union_nodes))
+            panel_w = max(4.0, panel_w * 0.9)
+            panel_h = max(4.0, panel_h * 0.9)
+
+            fig_w = cols_eff * panel_w
+            fig_h = rows * panel_h
+
+            fig, axes = plt.subplots(
+                rows, cols_eff, figsize=(fig_w, fig_h), dpi=args.dpi
+            )
+            if not isinstance(axes, (list, tuple, pd.Series, np.ndarray)):
+                axes = [[axes]]
+            else:
+                if isinstance(axes, np.ndarray):
+                    if axes.ndim == 1:
+                        axes = np.expand_dims(axes, axis=0)
+                    axes = axes.tolist()
+
+            if vmin_glob is None or vmax_glob is None:
+                all_bws = []
+                for agg in agg_per_g.values():
+                    all_bws.extend(agg["avg_bus_bw_GBs"].tolist())
+                if all_bws:
+                    vmin_c, vmax_c = min(all_bws), max(all_bws)
+                    if math.isclose(vmin_c, vmax_c, rel_tol=1e-12, abs_tol=1e-12):
+                        vmin_c -= 0.5
+                        vmax_c += 0.5
+                else:
+                    vmin_c, vmax_c = 0.0, 1.0
+            else:
+                vmin_c, vmax_c = vmin_glob, vmax_glob
+
+            ax_list = [ax for row_axes in axes for ax in row_axes]
+            for idx, g in enumerate(g_values_with_data):
+                ax = ax_list[idx]
+                agg = agg_per_g[g]
+                nodes = sorted(set(agg["node_a"]).union(set(agg["node_b"])))
+                z, _ = build_bw_matrix(agg, nodes)
+                draw_heatmap_ax(
+                    z,
+                    nodes,
+                    ax,
+                    vmin=vmin_c,
+                    vmax=vmax_c,
+                    title=f"G={g}",
+                )
+
+            for j in range(len(g_values_with_data), len(ax_list)):
+                ax_list[j].axis("off")
+
+            add_colorbar(
+                fig,
+                ax_list[: len(g_values_with_data)],
+                vmin_c,
+                vmax_c,
+                fraction=0.02,
+                pad=0.02,
+            )
+            fig.suptitle(f"{test_name} — heatmap, all G", fontsize=13, y=0.995)
+
+            combined_path = get_output_paths_heatmap_combined(base_dir, test_name)
+            fig.savefig(combined_path, bbox_inches="tight")
+            plt.close(fig)
+            print(f"  Saved: {combined_path}")
+
+        if args.heatmap_only:
+            return
+
     # Emit per-G images
     for g in g_values_with_data:
         agg = agg_per_g[g]
@@ -758,17 +1002,18 @@ def process_multi_g(
     if not args.no_combine and len(g_values_with_data) > 1:
         n = len(g_values_with_data)
         cols = max(1, int(args.combine_cols))
-        rows = (n + cols - 1) // cols
+        cols_eff = min(cols, n)
+        rows = (n + cols_eff - 1) // cols_eff
 
         panel_w, panel_h = dynamic_figsize(len(G_union.nodes()))
         # Scale panels to match individual G images (remove max size cap)
         panel_w = max(4.0, panel_w * 0.9)
         panel_h = max(4.0, panel_h * 0.9)
 
-        fig_w = cols * panel_w
+        fig_w = cols_eff * panel_w
         fig_h = rows * panel_h
 
-        fig, axes = plt.subplots(rows, cols, figsize=(fig_w, fig_h), dpi=args.dpi)
+        fig, axes = plt.subplots(rows, cols_eff, figsize=(fig_w, fig_h), dpi=args.dpi)
         if not isinstance(axes, (list, tuple, pd.Series, np.ndarray)):
             axes = [[axes]]
         else:

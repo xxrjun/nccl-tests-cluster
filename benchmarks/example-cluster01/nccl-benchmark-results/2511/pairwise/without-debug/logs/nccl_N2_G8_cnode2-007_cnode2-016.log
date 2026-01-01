@@ -1,0 +1,74 @@
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 300367 on cnode2-007 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 300368 on cnode2-007 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 300369 on cnode2-007 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 300370 on cnode2-007 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 300371 on cnode2-007 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 300372 on cnode2-007 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 300373 on cnode2-007 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 300374 on cnode2-007 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 279991 on cnode2-016 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 279992 on cnode2-016 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 10 Group  0 Pid 279993 on cnode2-016 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 11 Group  0 Pid 279994 on cnode2-016 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 12 Group  0 Pid 279995 on cnode2-016 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 13 Group  0 Pid 279996 on cnode2-016 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 14 Group  0 Pid 279997 on cnode2-016 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 15 Group  0 Pid 279998 on cnode2-016 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279998: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279991: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279992: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279993: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279997: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279994: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279995: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 279996: Test failure common.cu:1100
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: sendrecv_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 303021 on cnode2-007 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 303022 on cnode2-007 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 303023 on cnode2-007 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 303024 on cnode2-007 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 303025 on cnode2-007 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 303026 on cnode2-007 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 303027 on cnode2-007 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 303028 on cnode2-007 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 282749 on cnode2-016 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 282750 on cnode2-016 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 10 Group  0 Pid 282752 on cnode2-016 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 11 Group  0 Pid 282753 on cnode2-016 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 12 Group  0 Pid 282754 on cnode2-016 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 13 Group  0 Pid 282755 on cnode2-016 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 14 Group  0 Pid 282756 on cnode2-016 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 15 Group  0 Pid 282757 on cnode2-016 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282749: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282757: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282750: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282752: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282756: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282755: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282754: Test failure common.cu:1100
+cnode2-016: Test NCCL failure common.cu:1279 'remote process exited or there was a network error / '
+ .. cnode2-016 pid 282753: Test failure common.cu:1100
