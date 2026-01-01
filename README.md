@@ -7,10 +7,13 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 </p>
 
 <p align="center">
-  <img src="./assets/cluster00_topology_alltoall_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" />
+  <img src="./assets/example00_8node_topology_alltoall_g8.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" />
   <p align="center" style="font-size: 10pt">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>
   <!-- <img src="./assets/cluster00_topology_sendrecv_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)"/>
   <figcaption style="margin-top:0.5em;">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)</figcaption> -->
+
+  <img src="./assets/example01_17node_cluster_heatmap_sendrecv_allg.png" alt="Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" />
+  <p align="center" style="font-size: 10pt">Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
 </p>
 
 **Key Features:**
@@ -74,25 +77,29 @@ This structure allows users to easily manage benchmark results across multiple c
 
 ```bash
 benchmarks/
-  {cluster_name}/                    # e.g., cluster01: 8 nodes × 8 H100 GPUs each
+  {cluster_name}/                    # e.g., cluster00: 8 nodes × 8 H100 GPUs each
     nccl-benchmark-results/
-      single-node/                   # Single node test results
-        with-debug/
-          logs/
-          summary.csv
-          summary.md
-        without-debug/
-          (same as above)
-      multi-node/                   # Multi-node test results
-        (same as above)
-      pairwise/                     # Pairwise test results
-        with-debug/
-          logs/
-          topology/
-          summary.csv
-          summary.md
-        without-debug/
-          (same as above)
+      runs/
+        20250114-153012/             # Run ID (timestamp or label)
+          single-node/
+            with-debug/
+              logs/
+              summary.csv
+              summary.md
+            without-debug/
+              (same as above)
+          multi-node/
+            (same as above)
+          pairwise/
+            with-debug/
+              logs/
+              topology/
+              summary.csv
+              summary.md
+            without-debug/
+              (same as above)
+          meta.json                  # Optional run metadata
+      latest -> runs/20250114-153012
     # ... others documents/scripts of this cluster
   {cluster_name2}/
 nccl/
@@ -101,6 +108,8 @@ nccl/
     build/                         # Compiled NCCL test binaries (NCCL_TEST)
 # ... scripts
 ```
+
+By default, each run writes into `runs/<RUN_ID>` and updates the `latest` symlink. Reuse a `--run-id` to resume and fill in missing logs.
 
 ## Prerequisites
 
@@ -168,19 +177,22 @@ bash sbatch_run_nccl_tests_single.sh --help
 
 ```bash
 # Test all nodes in a partition with default GPU counts (4, 8)
-bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster00
 
 # Test specific nodes
-bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 -n "cnode-[001-004]"
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster00 -n "cnode-[001-004]"
 
 # Custom GPU counts
-bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 --gpn "2 4 8"
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster00 --gpn "2 4 8"
 
 # Dry run (preview without submitting)
-bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 --dry-run
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster00 --dry-run
 
 # Enable debug mode
-bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster01 --debug
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster00 --debug
+
+# Resume a prior run (skips existing logs)
+bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster00 --run-id 20250114-153012
 ```
 
 **Example output:**
@@ -221,26 +233,29 @@ bash sbatch_run_nccl_tests_pairs.sh --help
 
 ```bash
 # Test all node pairs in a partition with default GPU counts (1, 2, 4, 8)
-bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00
 
 # Test specific nodes
-bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 -n "cnode-[001-004]"
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00 -n "cnode-[001-004]"
 
 # Custom GPU counts
-bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 --gpn "2 4 8"
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00 --gpn "2 4 8"
 
 # Dry run (preview without submitting)
-bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 --dry-run
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00 --dry-run
 
 # Enable debug mode
-bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 --debug
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00 --debug
+
+# Resume a prior run (skips existing logs)
+bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00 --run-id 20250114-153012
 ```
 
 > [!TIP]
 > It is highly recommended to first test with only two nodes to verify that your NCCL environment is working correctly:
 >
 > ```bash
-> bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster01 -n "cnode-[001-002]"
+> bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00 -n "cnode-[001-002]"
 > ```
 
 **Example output:**
@@ -273,9 +288,10 @@ scancel -u $USER
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-p, --partition` | SLURM partition name | Required |
-| `-c, --cluster` | Cluster name for log organization | `cluster01` |
+| `-c, --cluster` | Cluster name for log organization | `cluster00` |
 | `-n, --nodelist` | Compressed nodelist (e.g., `"cnode-[001-004]"`) | All nodes in partition |
-| `-l, --log-dir` | Custom log directory | `benchmarks/<CLUSTER>/nccl-tests-{single\|pairs}/without-debug/logs` |
+| `-r, --run-id` | Run ID for timestamped results | `YYYYMMDD-HHMMSS` |
+| `-l, --log-dir` | Custom log directory | `benchmarks/<CLUSTER>/nccl-benchmark-results/runs/<RUN_ID>/{single-node\|pairwise}/without-debug/logs` |
 | `--gpn` | Space-separated GPU counts | Single: `"4 8"`, Pairs: `"1 2 4 8"` |
 | `--dry-run` | Preview commands without submitting | `false` |
 | `--debug` | Enable NCCL debug mode (affects performance) | `false` |
@@ -286,13 +302,13 @@ Parse NCCL test logs and generate summary reports (CSV + Markdown).
 
 ```bash
 # Process single-node test logs
-python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-benchmark-results/single-node/without-debug/logs
+python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/latest/single-node/without-debug/logs
 
 # Process pairwise test logs
-python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-benchmark-results/pairwise/without-debug/logs
+python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/latest/pairwise/without-debug/logs
 
 # Batch mode: process both with-debug/ and without-debug/
-python summarize_nccl_logs.py --input benchmarks/cluster01/nccl-benchmark-results/pairwise/
+python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/latest/pairwise/
 
 # Custom output paths
 python summarize_nccl_logs.py \
@@ -313,7 +329,7 @@ Visualize network topology with bandwidth heatmaps from `summary.csv`.
 
 ```bash
 # Process all tests and G values (recommended)
-python generate_topology.py --csv benchmarks/cluster01/nccl-benchmark-results/pairwise/without-debug/summary.csv --all
+python generate_topology.py --csv benchmarks/cluster00/nccl-benchmark-results/latest/pairwise/without-debug/summary.csv --all
 
 # Single test, all G values
 python generate_topology.py --csv ./summary.csv --test alltoall_perf
@@ -323,7 +339,7 @@ python generate_topology.py --csv ./summary.csv --all \
   --vmin 0 --vmax 80 --layout shell --adjust-labels
 ```
 
-**Output:** `topology/{test_name}/G{n}.png` + `allG.png` (combined grid)
+**Output:** `topology/{test_name}/G{n}.png` + `allG.png` (combined grid), plus `G{n}_heatmap.png` and `allG_heatmap.png` by default
 
 **Key Options:**
 
@@ -333,6 +349,8 @@ python generate_topology.py --csv ./summary.csv --all \
 - `--layout`: Algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`)
 - `--vmin/--vmax`: Bandwidth color scale range
 - `--dpi`: Resolution (default: 300)
+- `--no-heatmap`: Disable heatmap output
+- `--heatmap-only`: Emit only heatmaps (skip topology graph)
 
 Run `python generate_topology.py --help` for all options.
 
@@ -340,6 +358,8 @@ Run `python generate_topology.py --help` for all options.
 
 - [docs] [NVIDIA NCCL Documentation](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/index.html)
 - [paper] [[2507.04786] Demystifying NCCL: An In-depth Analysis of GPU Communication Protocols and Algorithms](https://arxiv.org/abs/2507.04786)
+- [paper] [[2510.20171] Collective Communication for 100k+ GPUs](https://arxiv.org/abs/2510.20171)
+
 
 ## Troubleshooting
 
@@ -354,10 +374,12 @@ Run `python generate_topology.py --help` for all options.
 
 - If average bus bandwidth is significantly below theoretical limits when using small transfer sizes (e.g., 32 MB), consider increasing `MINIMUM_TRANSFER_SIZE` in scripts (default: 32M). Larger transfer sizes typically achieve higher sustained bandwidth.
 
-- If you see red lines in the topology graphs, they indicate failed tests or missing data. Check the corresponding log files for detailed error messages.
+- If you see red lines in the topology graphs (or gray blocks in the heatmap), they indicate failed tests or missing data. Check the corresponding log files for detailed error messages.
 
-  <img src="./assets/17node_cluster_topology_sendrecv_allG.png" alt="Example topology graph of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" width="600" />
+  <img src="./assets/example01_17node_cluster_topology_sendrecv_g8.png" alt="Example topology graph of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" width="600" />
     <p style="font-size: 10pt">Example topology graph of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
+  <img src="./assets/example01_17node_cluster_heatmap_sendrecv_g8.png" alt="Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" width="600" />
+    <p style="font-size: 10pt">Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
 
 - If you see multiple processes using the same Rank in the logs, ensure that you compile NCCL Tests with MPI support enabled.
 
