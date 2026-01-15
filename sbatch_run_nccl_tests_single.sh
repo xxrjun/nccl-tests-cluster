@@ -92,7 +92,7 @@ if [[ "$DRY_RUN" -eq 0 && "$LOG_DIR_SET" -eq 0 ]]; then
   ln -sfn "$RESULTS_DIR" "benchmarks/$CLUSTER_NAME/nccl-benchmark-results/latest"
 fi
 
-JOB_TIME_LIMIT=${JOB_TIME_LIMIT:-"02:30:00"}
+JOB_TIME_LIMIT=${JOB_TIME_LIMIT:-"00:30:00"}
 
 # =============================================================
 # NCCL Tests Settings
