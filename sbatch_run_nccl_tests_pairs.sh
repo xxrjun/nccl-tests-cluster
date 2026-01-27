@@ -1,4 +1,9 @@
 #!/bin/bash
+set -uo pipefail
+
+# Source common library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/nccl_common.sh"
 
 # =============================================================
 # Parse Arguments
@@ -6,18 +11,18 @@
 
 usage() {
   cat <<'USAGE'
-Enumerate all idle-node pairs (or a user-specified compressed nodelist)
-and submit NCCL tests for GPUs per node in {1,2,3,4,5,6,7,8} by default.
+Enumerate all node pairs (or a user-specified compressed nodelist)
+and submit NCCL tests. Default GPUs per node: {1,2,4,8}.
 
 Usage:
   sbatch_run_nccl_tests_pairs.sh [options]
 
 Options:
   -p, --partition <PART>     Slurm partition name.
-  -c, --cluster <NAME>       Cluster name for organizing logs. Default: cluster01
+  -c, --cluster <NAME>       Cluster name for organizing logs. Default: cluster00
   -n, --nodelist "<string>"  Compressed nodelist to limit pairs, e.g. "cnode-[009,011-013]". If not set, all nodes in the partition are used.
   -r, --run-id <ID>          Run ID for timestamped results. Default: YYYYMMDD-HHMMSS
-  -l, --log-dir <DIR>        Directory for logs. Default: benchmarks/<CLUSTER>/nccl-benchmark-results/runs/<RUN_ID>/pairwise/without-debug/logs
+  -l, --log-dir <DIR>        Directory for logs. Default: benchmarks/<CLUSTER>/nccl-benchmark-results/pairwise/runs/<RUN_ID>/without-debug/logs (or with-debug)
       --gpn "<list>"         Space-separated GPUs-per-node list. Default: "1 2 4 8"
       --dry-run              Show commands without executing them
       --debug                Enable NCCL debug mode (may affect performance)
@@ -63,101 +68,77 @@ while [[ $# -gt 0 ]]; do
     *)
       echo "Unknown option: $1" >&2
       usage; exit 2;;
-  esac
+esac
 done
 
 
 # =============================================================
-# SLURM and Test Settings
+# Configuration
 # =============================================================
 
 PARTITION=${PARTITION:-}
-CLUSTER_NAME=${CLUSTER_NAME:-cluster01}
+CLUSTER_NAME=${CLUSTER_NAME:-cluster00}
 NODELIST=${NODELIST:-}
 GPN_LIST=${GPN_LIST:-"1 2 4 8"}
+GPN_LIST=${GPN_LIST//,/ }
 CPUS_PER_TASK=${CPUS_PER_TASK:-2}
 RUN_ID=${RUN_ID:-$(date +%Y%m%d-%H%M%S)}
-RESULTS_DIR=${RESULTS_DIR:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results/runs/$RUN_ID"}
+RESULTS_ROOT_BASE=${RESULTS_ROOT_BASE:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results"}
+RESULTS_ROOT=${RESULTS_ROOT:-"$RESULTS_ROOT_BASE/pairwise"}
+RUN_DIR=${RUN_DIR:-"$RESULTS_ROOT/runs/$RUN_ID"}
 LOG_DIR_SET=${LOG_DIR_SET:-0}
 
-DEBUG=${DEBUG:-0} # WARN: may affect performance results
+DEBUG=${DEBUG:-0}
 DRY_RUN=${DRY_RUN:-0}
 
-if [[ $DEBUG -eq 1 ]]; then
-  LOG_DIR=${LOG_DIR:-"$RESULTS_DIR/pairwise/with-debug/logs"}
-else
-  LOG_DIR=${LOG_DIR:-"$RESULTS_DIR/pairwise/without-debug/logs"}
-fi
-[[ "$DRY_RUN" -eq 1 ]] || mkdir -p "${LOG_DIR}"
-if [[ "$DRY_RUN" -eq 0 && "$LOG_DIR_SET" -eq 0 ]]; then
-  ln -sfn "$RESULTS_DIR" "benchmarks/$CLUSTER_NAME/nccl-benchmark-results/latest"
+if [[ -z "${PARTITION}" ]]; then
+  echo "Error: --partition is required." >&2
+  usage
+  exit 2
 fi
 
+# Pairwise test defaults
+MAXIMUM_TRANSFER_SIZE=${MAXIMUM_TRANSFER_SIZE:-32G}
+MINIMUM_TRANSFER_SIZE=${MINIMUM_TRANSFER_SIZE:-4G}
+STEP_FACTOR=${STEP_FACTOR:-2}
+ITERS_COUNT=${ITERS_COUNT:-20}
+WARMUP_ITERS=${WARMUP_ITERS:-5}
 JOB_TIME_LIMIT=${JOB_TIME_LIMIT:-"00:50:00"}
 
-# =============================================================
-# NCCL Tests Settings
-# nccl env vars docs: https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
-# =============================================================
-# export NCCL_SOCKET_IFNAME= # specifies which IP interfaces to use for communication.
-# export NCCL_IB_HCA=
-
-# Optional: set your nccl / nccl-tests path via env before running
-export NCCL_HOME="${NCCL_HOME:-$HOME/nccl-tests-cluster/nccl/build}"
-export NCCL_TEST="${NCCL_TEST:-$HOME/nccl-tests-cluster/nccl/nccl-tests}"
-export LD_LIBRARY_PATH=$NCCL_HOME/lib:$LD_LIBRARY_PATH
-
-MAXIMUM_TRANSFER_SIZE=16G
-MINIMUM_TRANSFER_SIZE=32M
-STEP_FACTOR=2
-ITERS_COUNT=20
-WARMUP_ITERS=5
-
-RUN_BIN=(
-    alltoall_perf
-    sendrecv_perf
-    all_reduce_perf
-    all_gather_perf
-    reduce_scatter_perf
-    
-    # broadcast_perf
-    # reduce_perf
+# Default binaries - kept minimal for pairwise to reduce test time
+DEFAULT_RUN_BIN=(
+  alltoall_perf
+  sendrecv_perf
 )
 
-
-if [[ ! -d "${NCCL_TEST}/build" ]]; then
-    echo "Error: NCCL_TEST path not found: ${NCCL_TEST}/build" >&2
-    exit 1
-fi
-
-if [[ "$DEBUG" -eq 1 ]]; then
-  echo "NCCL DEBUG: Enabled"
-
-  # WARN: NCCL debug env vars may affect performance results
-  export NCCL_DEBUG=INFO # Normally, we only need to print debug information.
-  # export NCCL_DEBUG=TRACE # Prints replayable trace information on every call. 
-  export NCCL_DEBUG_SUBSYS=ALL,^CALL,^PROXY
- 
-  # question about adaptive routing: https://github.com/NVIDIA/nccl/issues/1687
-  # export NCCL_SOCKET_IFNAME= # specifies which IP interfaces to use for communication.
-  # export NCCL_IB_ADAPTIVE_ROUTING=1 # default 1 on IB networks, 0 on RoCE
+if [[ -n "${RUN_BIN_LIST:-}" ]]; then
+  IFS=' ' read -r -a RUN_BIN <<< "${RUN_BIN_LIST}"
 else
-  echo "NCCL DEBUG: Disabled"
+  RUN_BIN=("${DEFAULT_RUN_BIN[@]}")
 fi
+
+# =============================================================
+# Setup Environment and Directories
+# =============================================================
+
+if [[ $DEBUG -eq 1 ]]; then
+  LOG_DIR=${LOG_DIR:-"$RUN_DIR/with-debug/logs"}
+else
+  LOG_DIR=${LOG_DIR:-"$RUN_DIR/without-debug/logs"}
+fi
+
+setup_nccl_env "$DEBUG" || exit 1
+setup_directories "$RESULTS_ROOT" "$RUN_DIR" "$LOG_DIR" "$DRY_RUN" "$LOG_DIR_SET"
 
 # =============================================================
 # Generate Node Pairs
 # =============================================================
 
-# Resolve node list
 declare -a NODES
 if [[ -n "${NODELIST}" ]]; then
-  # Accept compressed format like "cnode-[009,011-013]"
-  mapfile -t NODES < <(scontrol show hostnames "${NODELIST}")
+  mapfile -t NODES < <(expand_nodelist "${NODELIST}")
 else
-  # All nodes in the partition (uncomment the -t idle variant to restrict to idle)
-  # mapfile -t NODES < <(sinfo -p "${PARTITION}" -t idle -h -N -o %N | sort -V)
-  mapfile -t NODES < <(sinfo -p "${PARTITION}" -h -N -o %N | sort -V)
+  mapfile -t NODES < <(get_nodes_from_partition "${PARTITION}")
 fi
 
 # Generate unique unordered pairs (i<j)
@@ -205,21 +186,9 @@ for pair in "${pairs[@]}"; do
 
     echo "Submit: ${job}  --nodelist=${A},${B}  --gpus-per-node=${gpn}"
 
-
-    # Build NCCL test commands
-    nccl_cmd=""
-    for bin in "${RUN_BIN[@]}"; do
-      # nccl_cmd+="srun --mpi=pmix --nodes=2 --ntasks-per-node=${gpn} --ntasks $(( gpn * 2 )) ${NCCL_TEST}/build/${bin}"
-      nccl_cmd+="srun ${NCCL_TEST}/build/${bin}"
-      nccl_cmd+=" --iters ${ITERS_COUNT}"
-      nccl_cmd+=" --warmup_iters ${WARMUP_ITERS}"
-      nccl_cmd+=" -f ${STEP_FACTOR}"
-      nccl_cmd+=" --datatype double"
-      nccl_cmd+=" --minbytes ${MINIMUM_TRANSFER_SIZE}"
-      nccl_cmd+=" --maxbytes ${MAXIMUM_TRANSFER_SIZE}"
-      nccl_cmd+="; "
-    done
-    nccl_cmd=${nccl_cmd%"; "}
+    # Build NCCL test command using common library
+    nccl_cmd=$(build_nccl_cmd "$NCCL_TEST" "$ITERS_COUNT" "$WARMUP_ITERS" "$STEP_FACTOR" \
+               "$MINIMUM_TRANSFER_SIZE" "$MAXIMUM_TRANSFER_SIZE" "${RUN_BIN[@]}")
 
     sbatch_args=(
       -J "${job}"
@@ -228,46 +197,36 @@ for pair in "${pairs[@]}"; do
       --nodelist="${A},${B}"
       --gpus-per-node="${gpn}"
       --ntasks-per-node="${gpn}"
-      --cpus-per-task="${CPUS_PER_TASK:-2}"
+      --cpus-per-task="${CPUS_PER_TASK}"
       -o "${log}.log"
       -e "${log}.err"
+      --time "${JOB_TIME_LIMIT}"
       --wrap "${nccl_cmd}"
     )
-    if [[ -n "${JOB_TIME_LIMIT:-}" ]]; then
-      sbatch_args+=(--time "${JOB_TIME_LIMIT}")
-    fi
 
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-      echo "=========================================="
-      echo "DRY RUN: sbatch --test-only preview (no submission):"
-      printf 'sbatch --test-only %q ' "${sbatch_args[@]}"; echo
-      sbatch --test-only "${sbatch_args[@]}"
-      echo "=========================================="
-      echo ""
-    else
-      sbatch "${sbatch_args[@]}"
-    fi
-
+    submit_sbatch_job "$DRY_RUN" "${sbatch_args[@]}"
     ((NUM_SUBMIT++))
   done
 done
+
+# =============================================================
+# Summary
+# =============================================================
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN complete. Would have submitted ${NUM_SUBMIT} jobs. (${NUM_EXIST} skipped due to existing logs.)"
 else
   echo "Submitted ${NUM_SUBMIT} jobs. (${NUM_EXIST} skipped due to existing logs.)"
 fi
-echo "Total pairs: ${#pairs[@]}. Total jobs: ${NUM_TOTAL}."
 
-
-echo "=========================================="
-echo "Submission Summary"
-echo "=========================================="
-printf "%-15s %s\n" "Total pairs:"    "${#pairs[@]}"
-printf "%-15s %s\n" "Jobs per pair:"  "${num_gpn}"
-printf "%-15s %s\n" "Total jobs:"     "${NUM_TOTAL}"
-printf "%-15s %s\n" "Submitted:"      "${NUM_SUBMIT}"
-printf "%-15s %s\n" "Skipped:"        "${NUM_EXIST}"
+print_submission_summary "Submission Summary" \
+  "Total pairs" "${#pairs[@]}" \
+  "Jobs per pair" "${num_gpn}" \
+  "Total jobs" "${NUM_TOTAL}" \
+  "Submitted" "${NUM_SUBMIT}" \
+  "Skipped" "${NUM_EXIST}" \
+  "DRY RUN" "${DRY_RUN}" \
+  "NCCL DEBUG" "${DEBUG}"
 printf "%-15s %s\n" "DRY RUN:"        "${DRY_RUN}"
 printf "%-15s %s\n" "NCCL DEBUG:"     "${DEBUG}"
 echo "=========================================="
