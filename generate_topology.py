@@ -63,9 +63,9 @@ REQUIRED_COLS = {
     "peak_busbw_GBs",
 }
 
-DEFAULT_NODE_SIZE = 2400
-DEFAULT_FONT_SIZE = 7
-DEFAULT_EDGE_LABEL_FONT_SIZE = 9
+DEFAULT_NODE_SIZE = 2800  # Increased from 2400 for better visibility
+DEFAULT_FONT_SIZE = 9  # Increased from 7 for better readability
+DEFAULT_EDGE_LABEL_FONT_SIZE = 10  # Increased from 9
 DEFAULT_CMAP = "YlGn"
 CMAP_VMIN_RATIO = 0.25  # Trim the lightest 25% of colormap for better visibility
 CMAP_VMAX_RATIO = 1.0  # Keep the darkest colors
@@ -162,22 +162,26 @@ def parse_args() -> argparse.Namespace:
         help="Enable automatic label adjustment to avoid overlaps. May move labels away from edge centers.",
     )
     p.add_argument(
-        "--heatmap",
-        dest="heatmap",
+        "--topology",
         action="store_true",
-        default=True,
-        help="Also emit NxN bandwidth heatmap PNG(s). (default: enabled)",
+        help="Also emit topology graph PNG(s) in addition to heatmaps.",
     )
     p.add_argument(
-        "--no-heatmap",
-        dest="heatmap",
-        action="store_false",
-        help="Disable heatmap output.",
+        "--topology-only",
+        action="store_true",
+        help="Emit only topology graph PNG(s) (skip heatmaps).",
     )
     p.add_argument(
-        "--heatmap-only",
-        action="store_true",
-        help="Emit only heatmap PNG(s) (skip topology graph). Implies --heatmap.",
+        "--heatmap-values",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="Show numeric values inside heatmap cells. 'auto' enables when node count <= 20.",
+    )
+    p.add_argument(
+        "--heatmap-decimals",
+        type=int,
+        default=1,
+        help="Decimals for heatmap cell labels (when shown).",
     )
     return p.parse_args()
 
@@ -189,8 +193,8 @@ def validate_args(args: argparse.Namespace) -> None:
             raise ValueError("--vmin must be less than --vmax")
     if args.dpi <= 0:
         raise ValueError("--dpi must be positive")
-    if args.heatmap_only:
-        args.heatmap = True
+    if args.topology_only:
+        args.topology = True
 
     # Determine mode
     if args.test is None and args.g is None and not args.all:
@@ -212,6 +216,17 @@ def validate_df(df: pd.DataFrame) -> None:
 
 
 def normalize_pair(nodes_str: str) -> Tuple[str, str]:
+    """Parse a comma-separated node pair string into a sorted tuple.
+    
+    Args:
+        nodes_str: String like '"nodeA, nodeB"' or 'nodeA,nodeB'
+        
+    Returns:
+        Sorted tuple of two node names (a, b) where a <= b
+        
+    Raises:
+        ValueError: If string doesn't contain exactly two node names
+    """
     s = nodes_str.strip().strip('"').strip("'")
     parts = [x.strip() for x in s.split(",") if x.strip()]
     if len(parts) != 2:
@@ -223,7 +238,14 @@ def normalize_pair(nodes_str: str) -> Tuple[str, str]:
 
 
 def aggregate_links(df: pd.DataFrame) -> pd.DataFrame:
-    # Expect df already filtered by test and (optionally) G
+    """Aggregate bandwidth data by node pairs.
+    
+    Args:
+        df: DataFrame filtered by test and optionally G, with 'nodes' column
+        
+    Returns:
+        DataFrame with columns: node_a, node_b, avg_bus_bw_GBs, count
+    """
     pairs = df["nodes"].apply(normalize_pair)
     df = df.copy()
     df[["node_a", "node_b"]] = pd.DataFrame(pairs.tolist(), index=df.index)
@@ -241,6 +263,15 @@ def aggregate_links(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def bandwidth_clustering(G: nx.Graph, threshold: float) -> List[List[str]]:
+    """Cluster nodes by bandwidth threshold using connected components.
+    
+    Args:
+        G: NetworkX graph with 'bw' edge attribute
+        threshold: Minimum bandwidth to keep an edge
+        
+    Returns:
+        List of node clusters (each cluster is a sorted list of node names)
+    """
     G_filtered = nx.Graph()
     G_filtered.add_nodes_from(G.nodes())
 
@@ -258,7 +289,27 @@ def bandwidth_clustering(G: nx.Graph, threshold: float) -> List[List[str]]:
 
 
 def pick_layout(G: nx.Graph, which: str, seed: int) -> Dict[str, Tuple[float, float]]:
+    """Select and compute graph layout positions.
+    
+    Args:
+        G: NetworkX graph
+        which: Layout algorithm name (kamada, spring, circular, shell, bipartite, cluster)
+        seed: Random seed for reproducible layouts
+        
+    Returns:
+        Dictionary mapping node names to (x, y) positions
+    """
+    n_nodes = len(G.nodes())
+    
+    # For fully connected graphs (pairwise tests), prefer circular layout
+    # to avoid central node placement that makes diagrams hard to interpret
+    is_complete = G.number_of_edges() == n_nodes * (n_nodes - 1) // 2
+    
     if which == "kamada":
+        # For complete graphs with 6+ nodes, use circular layout instead
+        # Kamada-Kawai tends to place nodes in the center for dense graphs
+        if is_complete and n_nodes >= 6:
+            return nx.circular_layout(G)
         has_bw = all("bw" in G[u][v] for u, v in G.edges()) if G.edges() else False
         if has_bw:
             return nx.kamada_kawai_layout(G, weight="bw", scale=1.0)
@@ -314,13 +365,18 @@ def pick_layout(G: nx.Graph, which: str, seed: int) -> Dict[str, Tuple[float, fl
 
 
 def dynamic_figsize(n_nodes: int) -> Tuple[float, float]:
-    base = 6.0
+    """
+    Calculate figure size based on number of nodes.
+
+    Larger figures provide better spacing for labels and readability.
+    """
+    base = 8.0  # Increased from 6.0 for better padding
     if n_nodes <= 6:
         return (base, base)
-    s = base + 0.6 * math.sqrt(max(0, n_nodes - 6))
+    s = base + 0.8 * math.sqrt(max(0, n_nodes - 6))  # Increased scaling factor
     if n_nodes > 12:
-        s *= 1.5
-    max_size = 20.0 if n_nodes > 12 else 14.0
+        s *= 1.4
+    max_size = 24.0 if n_nodes > 12 else 16.0  # Increased max sizes
     return (min(max_size, s), min(max_size, s))
 
 
@@ -396,21 +452,40 @@ def add_colorbar(
     vmin: float,
     vmax: float,
     label: str = "Average bus BW (GB/s)",
+    use_cax: bool = False,
     **kwargs,
 ):
-    """Add colorbar to figure."""
+    """Add colorbar to figure.
+
+    Args:
+        fig: Matplotlib figure
+        ax: Axes to attach colorbar to, or dedicated colorbar axes if use_cax=True
+        vmin: Minimum value for color scale
+        vmax: Maximum value for color scale
+        label: Colorbar label
+        use_cax: If True, treat ax as dedicated colorbar axes (use cax= instead of ax=)
+        **kwargs: Additional arguments passed to fig.colorbar()
+    """
     sm = cm.ScalarMappable(
         norm=Normalize(vmin=vmin, vmax=vmax, clip=True), cmap=get_trimmed_colormap()
     )
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, **kwargs)
+    if use_cax:
+        cbar = fig.colorbar(sm, cax=ax, **kwargs)
+    else:
+        cbar = fig.colorbar(sm, ax=ax, **kwargs)
     cbar.set_label(label)
     return cbar
 
 
 def dynamic_heatmap_figsize(n_nodes: int) -> Tuple[float, float]:
-    base = 6.0
-    size = max(base, min(0.35 * n_nodes, 40.0))
+    """
+    Calculate heatmap figure size based on number of nodes.
+
+    Larger figures ensure tick labels and cell values are readable.
+    """
+    base = 8.0  # Increased from 6.0 for better padding
+    size = max(base, min(0.45 * n_nodes + 2, 45.0))  # More generous scaling
     return (size, size)
 
 
@@ -424,6 +499,15 @@ def heatmap_label_step(n_nodes: int) -> int:
     return 6
 
 
+def heatmap_should_show_values(args: argparse.Namespace, n_nodes: int) -> bool:
+    if args.heatmap_values == "on":
+        return True
+    if args.heatmap_values == "off":
+        return False
+    # auto
+    return n_nodes <= 20
+
+
 def draw_heatmap_ax(
     z: np.ndarray,
     nodes: List[str],
@@ -432,6 +516,8 @@ def draw_heatmap_ax(
     vmin: float,
     vmax: float,
     title: Optional[str] = None,
+    show_values: bool = False,
+    value_decimals: int = 1,
 ):
     ax.set_aspect("equal")
     n = len(nodes)
@@ -448,12 +534,39 @@ def draw_heatmap_ax(
     ax.set_xticks(ticks)
     ax.set_yticks(ticks)
 
-    font_size = 8 if n <= 30 else 6 if n <= 60 else 5
+    font_size = 10 if n <= 20 else 8 if n <= 40 else 6 if n <= 60 else 5  # Increased font sizes
     ax.set_xticklabels([nodes[i] for i in ticks], rotation=90, fontsize=font_size)
     ax.set_yticklabels([nodes[i] for i in ticks], fontsize=font_size)
 
     if title:
-        ax.set_title(title, fontsize=11, pad=10)
+        ax.set_title(title, fontsize=12, pad=8)  # Reduced padding for tighter layout
+
+    if show_values:
+        # Only annotate finite values; skip diagonal/self
+        val_font = 8 if n <= 15 else 7 if n <= 20 else 6  # Increased font sizes
+        norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                val = z[i, j]
+                if not (isinstance(val, float) or isinstance(val, np.floating)):
+                    continue
+                if math.isnan(val):
+                    continue
+                # Choose text color based on cell brightness for readability
+                normalized_val = norm(val)
+                text_color = "white" if normalized_val > 0.6 else "black"
+                ax.text(
+                    j,
+                    i,
+                    f"{val:.{value_decimals}f}",
+                    ha="center",
+                    va="center",
+                    fontsize=val_font,
+                    color=text_color,
+                    fontweight="semibold" if text_color == "white" else "normal",
+                )
 
     return im
 
@@ -556,7 +669,7 @@ def draw_topology_ax(
                 fontsize=DEFAULT_EDGE_LABEL_FONT_SIZE,
                 ha="center",
                 va="center",
-                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7),
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8),
             )
             texts.append(text)
 
@@ -591,12 +704,12 @@ def draw_topology_ax(
                 font_size=DEFAULT_EDGE_LABEL_FONT_SIZE,
                 rotate=False,
                 label_pos=0.5,
-                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7),
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8),
                 verticalalignment="bottom",
             )
 
     if title:
-        ax.set_title(title, fontsize=11, pad=10)
+        ax.set_title(title, fontsize=13, pad=16)  # Increased font and padding
 
 
 def compute_scales_for_groups(
@@ -613,7 +726,9 @@ def compute_scales_for_groups(
     for g, agg in agg_per_g.items():
         bws = agg["avg_bus_bw_GBs"].tolist()
         if bws:
-            perG_minmax[g] = (min(bws), max(bws))
+            lo = min(0.0, min(bws))
+            hi = max(bws)
+            perG_minmax[g] = (lo, hi)
             all_bws.extend(bws)
         else:
             perG_minmax[g] = (0.0, 1.0)
@@ -622,7 +737,7 @@ def compute_scales_for_groups(
     if user_vmin is not None and user_vmax is not None:
         vmin, vmax = float(user_vmin), float(user_vmax)
     elif global_scale and all_bws:
-        vmin, vmax = min(all_bws), max(all_bws)
+        vmin, vmax = min(0.0, min(all_bws)), max(all_bws)
     else:
         # Will set per-subplot later using perG_minmax.
         vmin = vmax = None
@@ -730,7 +845,7 @@ def process_single_g(
 
     bws = [float(x) for x in agg["avg_bus_bw_GBs"].tolist()]
     if bws:
-        auto_vmin = min(bws)
+        auto_vmin = min(0.0, min(bws))
         auto_vmax = max(bws)
     else:
         auto_vmin, auto_vmax = 0.0, 1.0
@@ -741,7 +856,8 @@ def process_single_g(
         vmin -= 0.5
         vmax += 0.5
 
-    if args.heatmap:
+    # Generate heatmap (default behavior, unless --topology-only)
+    if not args.topology_only:
         z, _ = build_bw_matrix(agg, nodes)
         fig, ax = plt.subplots(
             figsize=dynamic_heatmap_figsize(len(nodes)), dpi=args.dpi
@@ -755,6 +871,8 @@ def process_single_g(
             title=(
                 args.title if args.title else f"{test_name} — heatmap, N=2, G={g_value}"
             ),
+            show_values=heatmap_should_show_values(args, len(nodes)),
+            value_decimals=args.heatmap_decimals,
         )
         add_colorbar(fig, ax, vmin, vmax, fraction=0.046, pad=0.04)
         heatmap_path = output_path.with_name(f"{output_path.stem}_heatmap.png")
@@ -762,8 +880,10 @@ def process_single_g(
         fig.savefig(heatmap_path, bbox_inches="tight")
         plt.close(fig)
         print(f"  Saved: {heatmap_path}")
-        if args.heatmap_only:
-            return
+
+    # Skip topology graph unless explicitly requested
+    if not args.topology:
+        return
 
     figsize = dynamic_figsize(len(Gx.nodes()))
     fig, ax = plt.subplots(figsize=figsize, dpi=args.dpi)
@@ -853,8 +973,8 @@ def process_multi_g(
         global_scale=global_scale,
     )
 
-    # Emit heatmaps (per-G)
-    if args.heatmap:
+    # Emit heatmaps (per-G) - default behavior, unless --topology-only
+    if not args.topology_only:
         for g in g_values_with_data:
             agg = agg_per_g[g]
             nodes = sorted(set(agg["node_a"]).union(set(agg["node_b"])))
@@ -877,6 +997,8 @@ def process_multi_g(
                 vmin=vmin,
                 vmax=vmax,
                 title=f"{test_name} — heatmap, N=2, G={g}",
+                show_values=heatmap_should_show_values(args, len(nodes)),
+                value_decimals=args.heatmap_decimals,
             )
             add_colorbar(fig, ax, vmin, vmax, fraction=0.046, pad=0.04)
 
@@ -894,11 +1016,11 @@ def process_multi_g(
             rows = (n + cols_eff - 1) // cols_eff
 
             panel_w, panel_h = dynamic_heatmap_figsize(len(union_nodes))
-            panel_w = max(4.0, panel_w * 0.9)
-            panel_h = max(4.0, panel_h * 0.9)
+            panel_w = max(6.0, panel_w * 1.0)  # Larger panels for better node name visibility
+            panel_h = max(6.0, panel_h * 1.0)
 
-            fig_w = cols_eff * panel_w
-            fig_h = rows * panel_h
+            fig_w = cols_eff * panel_w + 1.0  # Compact margin for colorbar
+            fig_h = rows * panel_h  # No extra margin - let tight_layout handle it
 
             fig, axes = plt.subplots(
                 rows, cols_eff, figsize=(fig_w, fig_h), dpi=args.dpi
@@ -916,7 +1038,7 @@ def process_multi_g(
                 for agg in agg_per_g.values():
                     all_bws.extend(agg["avg_bus_bw_GBs"].tolist())
                 if all_bws:
-                    vmin_c, vmax_c = min(all_bws), max(all_bws)
+                    vmin_c, vmax_c = min(0.0, min(all_bws)), max(all_bws)
                     if math.isclose(vmin_c, vmax_c, rel_tol=1e-12, abs_tol=1e-12):
                         vmin_c -= 0.5
                         vmax_c += 0.5
@@ -938,28 +1060,33 @@ def process_multi_g(
                     vmin=vmin_c,
                     vmax=vmax_c,
                     title=f"G={g}",
+                    show_values=heatmap_should_show_values(args, len(nodes)),
+                    value_decimals=args.heatmap_decimals,
                 )
 
             for j in range(len(g_values_with_data), len(ax_list)):
                 ax_list[j].axis("off")
 
+            # Use tight_layout first, then manually position colorbar and title
+            fig.tight_layout(rect=[0, 0, 0.94, 0.92])  # Leave space for colorbar (right) and title (top)
+            cbar_ax = fig.add_axes([0.95, 0.12, 0.015, 0.76])  # [left, bottom, width, height]
             add_colorbar(
                 fig,
-                ax_list[: len(g_values_with_data)],
+                cbar_ax,
                 vmin_c,
                 vmax_c,
-                fraction=0.02,
-                pad=0.02,
+                use_cax=True,
             )
-            fig.suptitle(f"{test_name} — heatmap, all G", fontsize=13, y=0.995)
+            fig.suptitle(f"{test_name} — heatmap, all G", fontsize=14, y=0.97)
 
             combined_path = get_output_paths_heatmap_combined(base_dir, test_name)
-            fig.savefig(combined_path, bbox_inches="tight")
+            fig.savefig(combined_path)  # Don't use bbox_inches="tight" to preserve layout
             plt.close(fig)
             print(f"  Saved: {combined_path}")
 
-        if args.heatmap_only:
-            return
+    # Skip topology graphs unless explicitly requested
+    if not args.topology:
+        return
 
     # Emit per-G images
     for g in g_values_with_data:
@@ -1007,11 +1134,11 @@ def process_multi_g(
 
         panel_w, panel_h = dynamic_figsize(len(G_union.nodes()))
         # Scale panels to match individual G images (remove max size cap)
-        panel_w = max(4.0, panel_w * 0.9)
-        panel_h = max(4.0, panel_h * 0.9)
+        panel_w = max(5.0, panel_w * 0.95)  # Increased panel size
+        panel_h = max(5.0, panel_h * 0.95)
 
-        fig_w = cols_eff * panel_w
-        fig_h = rows * panel_h
+        fig_w = cols_eff * panel_w + 2.0  # Extra margin for colorbar
+        fig_h = rows * panel_h + 1.5  # Added margin for title
 
         fig, axes = plt.subplots(rows, cols_eff, figsize=(fig_w, fig_h), dpi=args.dpi)
         if not isinstance(axes, (list, tuple, pd.Series, np.ndarray)):
@@ -1060,18 +1187,19 @@ def process_multi_g(
         for j in range(len(g_values_with_data), len(ax_list)):
             ax_list[j].axis("off")
 
-        # Shared colorbar
+        # Adjust layout first, then add colorbar with reserved space
+        fig.subplots_adjust(left=0.06, right=0.88, wspace=0.25, hspace=0.3)
+        cbar_ax = fig.add_axes([0.91, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
         add_colorbar(
             fig,
-            ax_list[: len(g_values_with_data)],
+            cbar_ax,
             vmin_c,
             vmax_c,
-            fraction=0.02,
-            pad=0.02,
+            use_cax=True,
         )
 
         # Suptitle
-        fig.suptitle(f"{test_name} — all G", fontsize=13, y=0.995)
+        fig.suptitle(f"{test_name} — all G", fontsize=14, y=0.98)
 
         # Save combined
         combined_path = get_output_paths(base_dir, test_name, combined=True)

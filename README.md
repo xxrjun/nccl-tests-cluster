@@ -7,13 +7,11 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 </p>
 
 <p align="center">
-  <img src="./assets/example00_8node_topology_alltoall_g8.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)" />
-  <p align="center" style="font-size: 10pt">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (alltoall_perf)</p>
-  <!-- <img src="./assets/cluster00_topology_sendrecv_allG.png" alt="Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)"/>
-  <figcaption style="margin-top:0.5em;">Example topology graph of an 8-node H100 cluster, with 8 GPUs per node. (sendrecv_perf, G=8)</figcaption> -->
+  <img src="./assets/8node_heatmap_alltoall_allG.png" alt="Example heatmap of an 8-node H100 cluster (alltoall_perf, all G values)" width="700" />
+  <p align="center" style="font-size: 10pt">Example heatmap of an 8-node H100 cluster (alltoall_perf, all G values)</p>
 
-  <img src="./assets/example01_17node_cluster_heatmap_sendrecv_allg.png" alt="Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" />
-  <p align="center" style="font-size: 10pt">Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
+  <img src="./assets/17node_heatmap_alltoall_allG.png" alt="Example heatmap of a 17-node H100 cluster (alltoall_perf, all G values)" width="700" />
+  <p align="center" style="font-size: 10pt">Example heatmap of a 17-node H100 cluster (alltoall_perf, all G values)</p>
 </p>
 
 **Key Features:**
@@ -21,7 +19,7 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 - Run single-node [NCCL tests](https://github.com/NVIDIA/nccl-tests) for intra-node performance evaluation
 - Run pairwise NCCL tests across all node combinations for inter-node evaluation
 - Parse logs and generate summary reports (CSV/Markdown)
-- Visualize network topology with bandwidth graphs
+- Visualize network bandwidth with heatmaps (and optional topology graphs)
 - Support for [SLURM](https://slurm.schedmd.com/documentation.html) clusters
 
 **Testing Strategy:**
@@ -31,6 +29,7 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 
 ## Table of Contents <!-- omit in toc -->
 
+- [Quick Start](#quick-start)
 - [Motivation](#motivation)
 - [Limitations](#limitations)
 - [Project Structure](#project-structure)
@@ -40,11 +39,48 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 - [Usage](#usage)
   - [Run NCCL Tests (Single-Node)](#run-nccl-tests-single-node)
   - [Run NCCL Tests (Pairs)](#run-nccl-tests-pairs)
+  - [Run NCCL Tests (Multi-Node)](#run-nccl-tests-multi-node)
+  - [Quick Smoke Test](#quick-smoke-test)
   - [Summarize Logs](#summarize-logs)
-  - [Generate Topology Graphs](#generate-topology-graphs)
+  - [Generate Bandwidth Plots](#generate-bandwidth-plots)
+  - [Generate Heatmaps](#generate-heatmaps)
+- [Configuration](#configuration)
+  - [Default Test Parameters](#default-test-parameters)
+  - [Default Test Binaries](#default-test-binaries)
+  - [Environment Variable Overrides](#environment-variable-overrides)
 - [Useful Links](#useful-links)
 - [Troubleshooting](#troubleshooting)
 - [Known Issues](#known-issues)
+
+## Quick Start
+
+Get started in 3 steps:
+
+```bash
+# 1. Build NCCL and NCCL tests
+bash build_nccl_and_tests.sh
+
+# 2. Set up Python environment (for log parsing & visualization)
+uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
+
+# 3. Run a smoke test to verify everything works
+bash sbatch_run_nccl_tests_smoke.sh -p <your-partition> -c <cluster-name> -n "node1,node2"
+```
+
+After the smoke test completes, check the results in `benchmarks/<cluster-name>/nccl-benchmark-results/smoke/latest/`.
+
+For full pairwise testing with visualization:
+
+```bash
+# Run pairwise tests
+bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c <cluster> -n "node[01-04]"
+
+# Summarize logs
+python summarize_nccl_logs.py --input benchmarks/<cluster>/nccl-benchmark-results/pairwise/latest/without-debug/logs
+
+# Generate heatmaps
+python generate_topology.py --csv benchmarks/<cluster>/nccl-benchmark-results/pairwise/latest/without-debug/summary.csv --all
+```
 
 ## Motivation
 
@@ -58,7 +94,7 @@ _NCCL Tests Cluster_ bridges this gap by automating and extending NCCL Tests for
 
 - **Automatically run pairwise NCCL benchmarks** across all node combinations
 - **Parse and summarize logs** into structured CSV/Markdown reports
-- **Visualize network topology** with bandwidth-based heatmaps and graphs
+- **Visualize network bandwidth** with heatmaps (and optional topology graphs)
 
 Together, these capabilities extend NCCL testing into a fully automated and scalable workflow—making it easier to verify cluster health, identify communication bottlenecks, and optimize resource allocation even without system-level monitoring tools.
 
@@ -69,47 +105,57 @@ Together, these capabilities extend NCCL testing into a fully automated and scal
   - No automatic testing of all GPU/NIC combinations
   - Manual configuration via environment variables (e.g., `CUDA_VISIBLE_DEVICES`, NCCL variables) is possible
   - GPU/NIC details are only visible in debug logs (`--debug` enables `NCCL_DEBUG=INFO`)
-- **Test Configuration**: Only pairwise (N=2) tests supported
+- **Test Configuration**: Pairwise (N=2) and multi-node (N>=2) scripts are available; topology graphs currently target pairwise summaries.
 
 ## Project Structure
 
-This structure allows users to easily manage benchmark results across multiple clusters, with each cluster maintaining its own NCCL test logs and summaries. Additional documents or scripts related to specific clusters—such as hardware specifications or other types of benchmarks—can also be included as needed.
+Results are now organized by **test type first, then run ID**, so you can browse or cleanly remove entire test classes. Each test type keeps its own `latest` symlink.
 
 ```bash
 benchmarks/
-  {cluster_name}/                    # e.g., cluster00: 8 nodes × 8 H100 GPUs each
+  {cluster_name}/
     nccl-benchmark-results/
-      runs/
-        20250114-153012/             # Run ID (timestamp or label)
-          single-node/
+      single-node/
+        runs/
+          <RUN_ID>/
+            without-debug/
+              logs/
+              summary.csv
+              summary.md
+              plots/           # Bandwidth plots (message size vs bandwidth)
             with-debug/
               logs/
               summary.csv
               summary.md
+        latest -> runs/<RUN_ID>
+      pairwise/
+        runs/
+          <RUN_ID>/
             without-debug/
-              (same as above)
-          multi-node/
-            (same as above)
-          pairwise/
-            with-debug/
               logs/
-              topology/
+              topology/        # Heatmaps (and optional topology graphs)
+              plots/           # Bandwidth plots
               summary.csv
               summary.md
-            without-debug/
-              (same as above)
-          meta.json                  # Optional run metadata
-      latest -> runs/20250114-153012
-    # ... others documents/scripts of this cluster
-  {cluster_name2}/
+            with-debug/
+              ...
+        latest -> runs/<RUN_ID>
+      multi-node/
+        runs/<RUN_ID>/...
+        latest -> runs/<RUN_ID>
+      smoke/
+        runs/<RUN_ID>/logs
+        latest -> runs/<RUN_ID>
+    # other cluster docs/scripts
 nccl/
-  build/                           # Compiled NCCL library (NCCL_HOME)
+  build/           # NCCL build (NCCL_HOME)
   nccl-tests/
-    build/                         # Compiled NCCL test binaries (NCCL_TEST)
-# ... scripts
+    build/         # NCCL test binaries (NCCL_TEST)
+lib/
+  nccl_common.sh   # Shared shell functions for scripts
 ```
 
-By default, each run writes into `runs/<RUN_ID>` and updates the `latest` symlink. Reuse a `--run-id` to resume and fill in missing logs.
+Reuse a `--run-id` to resume and fill in missing logs. The `latest` symlink is set per test type (single-node, pairwise, multi-node, smoke).
 
 ## Prerequisites
 
@@ -134,7 +180,7 @@ bash build_nccl_and_tests.sh
 
 ### Python Environment
 
-Install required packages for log parsing and topology visualization.
+Install required packages for log parsing and visualization.
 
 **Option 1: Using [uv](https://docs.astral.sh/uv/) (recommended)**
 
@@ -291,24 +337,56 @@ scancel -u $USER
 | `-c, --cluster` | Cluster name for log organization | `cluster00` |
 | `-n, --nodelist` | Compressed nodelist (e.g., `"cnode-[001-004]"`) | All nodes in partition |
 | `-r, --run-id` | Run ID for timestamped results | `YYYYMMDD-HHMMSS` |
-| `-l, --log-dir` | Custom log directory | `benchmarks/<CLUSTER>/nccl-benchmark-results/runs/<RUN_ID>/{single-node\|pairwise}/without-debug/logs` |
+| `-l, --log-dir` | Custom log directory | `benchmarks/<CLUSTER>/nccl-benchmark-results/<test-type>/runs/<RUN_ID>/without-debug/logs` |
 | `--gpn` | Space-separated GPU counts | Single: `"4 8"`, Pairs: `"1 2 4 8"` |
 | `--dry-run` | Preview commands without submitting | `false` |
 | `--debug` | Enable NCCL debug mode (affects performance) | `false` |
+| `--gpn` (comma ok) | GPU counts can also be comma-separated, e.g., `"1,2,4,8"` |
+
+### Run NCCL Tests (Multi-Node)
+
+Run one NCCL job across N>=2 nodes (not all pair combinations).
+
+```bash
+# Use first 4 nodes in the partition, 8 GPUs per node
+bash sbatch_run_nccl_tests_multi.sh -p gpu-partition -c cluster00 --num-nodes 4 --gpn "8"
+
+# Explicit nodelist
+bash sbatch_run_nccl_tests_multi.sh -p gpu-partition -c cluster00 -n "cnode-[001-004]"
+
+# Debug mode and custom tests (space-separated list)
+RUN_BIN_LIST="all_reduce_perf all_gather_perf" \
+bash sbatch_run_nccl_tests_multi.sh -p gpu-partition -c cluster00 --num-nodes 8 --gpn "4"
+
+# Dry run
+bash sbatch_run_nccl_tests_multi.sh -p gpu-partition --dry-run
+```
+
+### Quick Smoke Test
+
+Fast two-node sanity check (all_reduce_perf + sendrecv_perf, small message sizes).
+
+```bash
+# Default: first two nodes in the partition, 1 GPU per node
+bash sbatch_run_nccl_tests_smoke.sh -p gpu-partition -c cluster00
+
+# Explicit nodes and debug
+bash sbatch_run_nccl_tests_smoke.sh -p gpu-partition -c cluster00 -n "cnode-[001-002]" --debug
+```
 
 ### Summarize Logs
 
 Parse NCCL test logs and generate summary reports (CSV + Markdown).
 
 ```bash
-# Process single-node test logs
-python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/latest/single-node/without-debug/logs
+# Process single-node test logs (latest run)
+python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/single-node/latest/without-debug/logs
 
-# Process pairwise test logs
-python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/latest/pairwise/without-debug/logs
+# Process pairwise test logs (latest run)
+python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/pairwise/latest/without-debug/logs
 
-# Batch mode: process both with-debug/ and without-debug/
-python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/latest/pairwise/
+# Batch mode: process both with-debug/ and without-debug/ for a run
+python summarize_nccl_logs.py --input benchmarks/cluster00/nccl-benchmark-results/pairwise/latest
 
 # Custom output paths
 python summarize_nccl_logs.py \
@@ -323,36 +401,115 @@ python summarize_nccl_logs.py \
 - Pairs: `..._N2_G{G}_node1_node2.log` (e.g., `nccl_N2_G8_cnode-005_cnode-006.log`)
 - The `_debug` suffix is automatically ignored
 
-### Generate Topology Graphs
+### Generate Bandwidth Plots
 
-Visualize network topology with bandwidth heatmaps from `summary.csv`.
+Generate bandwidth vs message size plots for visualizing NCCL performance trends.
 
 ```bash
-# Process all tests and G values (recommended)
-python generate_topology.py --csv benchmarks/cluster00/nccl-benchmark-results/latest/pairwise/without-debug/summary.csv --all
+# Generate plots from single-node logs (all tests and G values)
+python plot_nccl_bandwidth.py --input benchmarks/cluster00/nccl-benchmark-results/single-node/latest/without-debug/logs
+
+# Filter by specific test
+python plot_nccl_bandwidth.py --input ./logs --test all_reduce_perf
+
+# Filter by GPU count
+python plot_nccl_bandwidth.py --input ./logs --g 8
+
+# Use algorithm bandwidth instead of bus bandwidth
+python plot_nccl_bandwidth.py --input ./logs --metric algbw
+
+# Save parsed data to CSV for further analysis
+python plot_nccl_bandwidth.py --input ./logs --save-csv detailed_data.csv
+```
+
+**Output:** `plots/{test_name}/G{n}_{node}.png` (individual) + `G{n}_combined.png` (comparison)
+
+**Key Options:**
+
+- `--test NAME`: Filter by test name (e.g., `all_reduce_perf`)
+- `--g N`: Filter by GPU count
+- `--metric {busbw|algbw}`: Bandwidth metric (default: `busbw`)
+- `--out-dir DIR`: Custom output directory
+- `--save-csv FILE`: Export per-message-size data to CSV
+
+Run `python plot_nccl_bandwidth.py --help` for all options.
+
+### Generate Heatmaps
+
+Visualize network bandwidth with heatmaps from `summary.csv`. By default, only heatmaps are generated; topology graphs require the `--topology` flag.
+
+```bash
+# Process all tests and G values (generates heatmaps only by default)
+python generate_topology.py --csv benchmarks/cluster00/nccl-benchmark-results/pairwise/latest/without-debug/summary.csv --all
 
 # Single test, all G values
 python generate_topology.py --csv ./summary.csv --test alltoall_perf
 
+# Also generate topology graphs (in addition to heatmaps)
+python generate_topology.py --csv ./summary.csv --all --topology
+
 # With custom styling
-python generate_topology.py --csv ./summary.csv --all \
+python generate_topology.py --csv ./summary.csv --all --topology \
   --vmin 0 --vmax 80 --layout shell --adjust-labels
 ```
 
-**Output:** `topology/{test_name}/G{n}.png` + `allG.png` (combined grid), plus `G{n}_heatmap.png` and `allG_heatmap.png` by default
+**Output:** `topology/{test_name}/G{n}_heatmap.png` and `allG_heatmap.png` by default; add `--topology` to also generate `G{n}.png` + `allG.png` (combined grid)
 
 **Key Options:**
 
 - `--all`: Process all tests and G values
 - `--test NAME`: Process specific test only
+- `--topology`: Also generate topology graph PNG(s) in addition to heatmaps
+- `--topology-only`: Generate only topology graphs (skip heatmaps)
 - `--adjust-labels`: Auto-adjust overlapping labels (useful for dense graphs)
 - `--layout`: Algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`)
+- `--heatmap-values {auto|on|off}`: Show numbers in heatmap cells (default `auto` for <=20 nodes)
+- Color scale now floors to 0 by default to avoid misleading low-end colors; override with `--vmin`
 - `--vmin/--vmax`: Bandwidth color scale range
 - `--dpi`: Resolution (default: 300)
-- `--no-heatmap`: Disable heatmap output
-- `--heatmap-only`: Emit only heatmaps (skip topology graph)
 
 Run `python generate_topology.py --help` for all options.
+
+## Configuration
+
+Each script has sensible defaults that can be overridden via environment variables or CLI options.
+
+### Default Test Parameters
+
+| Parameter | Single-Node | Pairwise | Multi-Node | Smoke |
+|-----------|-------------|----------|------------|-------|
+| `MAXIMUM_TRANSFER_SIZE` | 16G | 32G | 64G | 512M |
+| `MINIMUM_TRANSFER_SIZE` | 32M | 4G | 4G | 32M |
+| `STEP_FACTOR` | 2 | 2 | 2 | 2 |
+| `ITERS_COUNT` | 20 | 20 | 20 | 5 |
+| `WARMUP_ITERS` | 5 | 5 | 5 | 2 |
+| `JOB_TIME_LIMIT` | 00:30:00 | 00:50:00 | 00:50:00 | 00:05:00 |
+| GPU counts (`--gpn`) | 4, 8 | 1, 2, 4, 8 | 1, 2, 4, 8 | 1 |
+
+> **Note**: `JOB_TIME_LIMIT` format is `HH:MM:SS` (hours:minutes:seconds).
+
+### Default Test Binaries
+
+| Script | Default Binaries |
+|--------|------------------|
+| Single-Node | `all_reduce_perf`, `all_gather_perf`, `reduce_scatter_perf`, `alltoall_perf`, `sendrecv_perf` |
+| Pairwise | `alltoall_perf`, `sendrecv_perf` |
+| Multi-Node | `all_reduce_perf`, `all_gather_perf`, `reduce_scatter_perf`, `alltoall_perf`, `sendrecv_perf` |
+| Smoke | `all_reduce_perf`, `sendrecv_perf` |
+
+### Environment Variable Overrides
+
+Override any default by setting environment variables before running scripts:
+
+```bash
+# Example: Custom transfer sizes and iterations
+MAXIMUM_TRANSFER_SIZE=8G MINIMUM_TRANSFER_SIZE=1G ITERS_COUNT=50 \
+  bash sbatch_run_nccl_tests_pairs.sh -p gpu-partition -c cluster00
+
+# Example: Custom test binaries
+RUN_BIN_LIST="all_reduce_perf alltoall_perf" \
+  bash sbatch_run_nccl_tests_single.sh -p gpu-partition -c cluster00
+```
 
 ## Useful Links
 
@@ -374,12 +531,7 @@ Run `python generate_topology.py --help` for all options.
 
 - If average bus bandwidth is significantly below theoretical limits when using small transfer sizes (e.g., 32 MB), consider increasing `MINIMUM_TRANSFER_SIZE` in scripts (default: 32M). Larger transfer sizes typically achieve higher sustained bandwidth.
 
-- If you see red lines in the topology graphs (or gray blocks in the heatmap), they indicate failed tests or missing data. Check the corresponding log files for detailed error messages.
-
-  <img src="./assets/example01_17node_cluster_topology_sendrecv_g8.png" alt="Example topology graph of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" width="600" />
-    <p style="font-size: 10pt">Example topology graph of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
-  <img src="./assets/example01_17node_cluster_heatmap_sendrecv_g8.png" alt="Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)" width="600" />
-    <p style="font-size: 10pt">Example heatmap of a 17-node H100 cluster, with 8 GPUs per node. (sendrecv_perf)</p>
+- If you see gray blocks in the heatmap (or red lines in topology graphs), they indicate failed tests or missing data. Check the corresponding log files for detailed error messages.
 
 - If you see multiple processes using the same Rank in the logs, ensure that you compile NCCL Tests with MPI support enabled.
 
@@ -414,4 +566,4 @@ Run `python generate_topology.py --help` for all options.
 
 ## Known Issues
 
-- For large clusters, the topology becomes too crowded and hard to identify the performance differences between groups (if any). Consider splitting the cluster into smaller sub-clusters for better visualization. It is be planned to add better support for large clusters in future releases.
+- For large clusters, the heatmap and topology graph become too crowded and hard to identify performance differences between groups (if any). Consider splitting the cluster into smaller sub-clusters for better visualization. It is planned to add better support for large clusters in future releases.
