@@ -7,12 +7,21 @@ Automated Inter-node bandwidth testing and visualization for GPU clusters using 
 </p>
 
 <p align="center">
-  <img src="./assets/8node_heatmap_alltoall_allG.png" alt="Example heatmap of an 8-node H100 cluster (alltoall_perf, all G values)" width="700" />
-  <p align="center" style="font-size: 10pt">Example heatmap of an 8-node H100 cluster (alltoall_perf, all G values)</p>
-
-  <img src="./assets/17node_heatmap_alltoall_allG.png" alt="Example heatmap of a 17-node H100 cluster (alltoall_perf, all G values)" width="700" />
-  <p align="center" style="font-size: 10pt">Example heatmap of a 17-node H100 cluster (alltoall_perf, all G values)</p>
+  <img src="./assets/8node_heatmap_alltoall_allG.png"
+       alt="Example heatmap of an 8-node H100 cluster (alltoall_perf, all G values)"
+       width="700" />
+  <br/>
+  <sub>Example heatmap of an 8-node H100 cluster (alltoall_perf, all G values)</sub>
 </p>
+
+<p align="center">
+  <img src="./assets/17node_heatmap_alltoall_allG.png"
+       alt="Example heatmap of a 17-node H100 cluster (alltoall_perf, all G values)"
+       width="700" />
+  <br/>
+  <sub>Example heatmap of a 17-node H100 cluster (alltoall_perf, all G values)</sub>
+</p>
+
 
 **Key Features:**
 
@@ -331,16 +340,16 @@ scancel -u $USER
 ```
 
 **Common CLI Options:**
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-p, --partition` | SLURM partition name | Required |
-| `-c, --cluster` | Cluster name for log organization | `cluster00` |
-| `-n, --nodelist` | Compressed nodelist (e.g., `"cnode-[001-004]"`) | All nodes in partition |
-| `-r, --run-id` | Run ID for timestamped results | `YYYYMMDD-HHMMSS` |
-| `-l, --log-dir` | Custom log directory | `benchmarks/<CLUSTER>/nccl-benchmark-results/<test-type>/runs/<RUN_ID>/without-debug/logs` |
-| `--gpn` | Space-separated GPU counts | Single: `"4 8"`, Pairs: `"1 2 4 8"` |
-| `--dry-run` | Preview commands without submitting | `false` |
-| `--debug` | Enable NCCL debug mode (affects performance) | `false` |
+| Option             | Description                                               | Default                                                                                    |
+| ------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `-p, --partition`  | SLURM partition name                                      | Required                                                                                   |
+| `-c, --cluster`    | Cluster name for log organization                         | `cluster00`                                                                                |
+| `-n, --nodelist`   | Compressed nodelist (e.g., `"cnode-[001-004]"`)           | All nodes in partition                                                                     |
+| `-r, --run-id`     | Run ID for timestamped results                            | `YYYYMMDD-HHMMSS`                                                                          |
+| `-l, --log-dir`    | Custom log directory                                      | `benchmarks/<CLUSTER>/nccl-benchmark-results/<test-type>/runs/<RUN_ID>/without-debug/logs` |
+| `--gpn`            | Space-separated GPU counts                                | Single: `"4 8"`, Pairs: `"1 2 4 8"`                                                        |
+| `--dry-run`        | Preview commands without submitting                       | `false`                                                                                    |
+| `--debug`          | Enable NCCL debug mode (affects performance)              | `false`                                                                                    |
 | `--gpn` (comma ok) | GPU counts can also be comma-separated, e.g., `"1,2,4,8"` |
 
 ### Run NCCL Tests (Multi-Node)
@@ -476,26 +485,26 @@ Each script has sensible defaults that can be overridden via environment variabl
 
 ### Default Test Parameters
 
-| Parameter | Single-Node | Pairwise | Multi-Node | Smoke |
-|-----------|-------------|----------|------------|-------|
-| `MAXIMUM_TRANSFER_SIZE` | 16G | 32G | 64G | 512M |
-| `MINIMUM_TRANSFER_SIZE` | 32M | 4G | 4G | 32M |
-| `STEP_FACTOR` | 2 | 2 | 2 | 2 |
-| `ITERS_COUNT` | 20 | 20 | 20 | 5 |
-| `WARMUP_ITERS` | 5 | 5 | 5 | 2 |
-| `JOB_TIME_LIMIT` | 00:30:00 | 00:50:00 | 00:50:00 | 00:05:00 |
-| GPU counts (`--gpn`) | 4, 8 | 1, 2, 4, 8 | 1, 2, 4, 8 | 1 |
+| Parameter               | Single-Node | Pairwise   | Multi-Node | Smoke    |
+| ----------------------- | ----------- | ---------- | ---------- | -------- |
+| `MAXIMUM_TRANSFER_SIZE` | 16G         | 32G        | 64G        | 512M     |
+| `MINIMUM_TRANSFER_SIZE` | 32M         | 4G         | 4G         | 32M      |
+| `STEP_FACTOR`           | 2           | 2          | 2          | 2        |
+| `ITERS_COUNT`           | 20          | 20         | 20         | 5        |
+| `WARMUP_ITERS`          | 5           | 5          | 5          | 2        |
+| `JOB_TIME_LIMIT`        | 00:30:00    | 00:50:00   | 00:50:00   | 00:05:00 |
+| GPU counts (`--gpn`)    | 4, 8        | 1, 2, 4, 8 | 1, 2, 4, 8 | 1        |
 
 > **Note**: `JOB_TIME_LIMIT` format is `HH:MM:SS` (hours:minutes:seconds).
 
 ### Default Test Binaries
 
-| Script | Default Binaries |
-|--------|------------------|
+| Script      | Default Binaries                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------- |
 | Single-Node | `all_reduce_perf`, `all_gather_perf`, `reduce_scatter_perf`, `alltoall_perf`, `sendrecv_perf` |
-| Pairwise | `alltoall_perf`, `sendrecv_perf` |
-| Multi-Node | `all_reduce_perf`, `all_gather_perf`, `reduce_scatter_perf`, `alltoall_perf`, `sendrecv_perf` |
-| Smoke | `all_reduce_perf`, `sendrecv_perf` |
+| Pairwise    | `alltoall_perf`, `sendrecv_perf`                                                              |
+| Multi-Node  | `all_reduce_perf`, `all_gather_perf`, `reduce_scatter_perf`, `alltoall_perf`, `sendrecv_perf` |
+| Smoke       | `all_reduce_perf`, `sendrecv_perf`                                                            |
 
 ### Environment Variable Overrides
 
