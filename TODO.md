@@ -8,21 +8,24 @@
   - automatically detect available hardware (e.g., nodes, GPUs per node)
   - suggest optimal test pairs and configurations
 
-- [ ] feat: multi-node nccl-tests script `sbatch_run_nccl_tests_multi.sh`
+- [x] feat: multi-node nccl-tests script `sbatch_run_nccl_tests_multi.sh`
 
   - organize logs by cluster name
   - parse logs to csv/markdown table (no topology visualization)
 
-- [ ] feat: single node nccl-tests script `sbatch_run_nccl_tests_single.sh`
+- [x] feat: single node nccl-tests script `sbatch_run_nccl_tests_single.sh`
 
-  - organize logs by cluster name
-  - parse logs to csv/markdown table
-  - plots
+  - [x] organize logs by cluster name
+  - [x] parse logs to csv/markdown table
+  - [x] plots (via `plot_nccl_bandwidth.py`)
     - x-axis: message size
     - y-axis: bandwidth
     - each node has single plot, also combined plot for all nodes with different lines
 
-- [ ] feat: plotting across multiple messages sizes
+- [x] feat: plotting across multiple messages sizes
+
+  - implemented in `plot_nccl_bandwidth.py`
+  - supports both single-node and pairwise test results
 
 ## Enhancements
 
@@ -35,28 +38,20 @@
 
   ```bash
   benchmarks/
-  {cluster_name}/                    # e.g., cluster01: 8 nodes × 8 H100 GPUs each
+  {cluster_name}/
     nccl-benchmark-results/
-      single-node/                   # Single node test results
-        with-debug/
-          logs/
-          summary.csv
-          summary.md
-        without-debug/
-          (same as above)
-      multi-node/                   # Multi-node test results
-        (same as above)
-      pairwise/                     # Pairwise test results
-        with-debug/
-          logs/
-          topology/
-          summary.csv
-          summary.md
-        without-debug/
-          (same as above)
-    # ... others documents/scripts of this cluster
-  {cluster_name2}/
-    ...
+      single-node/
+        runs/<RUN_ID>/{with-debug,without-debug}/logs
+        latest -> runs/<RUN_ID>
+      pairwise/
+        runs/<RUN_ID>/{with-debug,without-debug}/logs
+        latest -> runs/<RUN_ID>
+      multi-node/
+        runs/<RUN_ID>/{with-debug,without-debug}/logs
+        latest -> runs/<RUN_ID>
+      smoke/
+        runs/<RUN_ID>/logs
+        latest -> runs/<RUN_ID>
   ```
 
 - [x] feat: summarize failed tests or missing data into `failures.txt` using `summarize_nccl_logs.py`
@@ -77,6 +72,14 @@
 - [ ] feat: specify NICs to use for tests (e.g., for nodes with multiple NICs)
 
 - [x] feat: slurm timeout control
+
+- [x] feat: add number in the heatmap cells to indicate bandwidth values
+
+- [x] refactor: extract shared shell helpers for sbatch scripts to reduce duplication
+
+  - created `lib/nccl_common.sh` with shared functions for NCCL environment setup,
+    directory management, command building, and job submission
+  - integrated into all sbatch scripts: `sbatch_run_nccl_tests_{single,pairs,multi,smoke}.sh`
 
 ## Documentation
 

@@ -1,0 +1,140 @@
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 680367 on cnode2-016 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 680368 on cnode2-016 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 680369 on cnode2-016 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 680370 on cnode2-016 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       1048576    double    none      -1   110.42  303.88  227.91       0   108.09  310.42  232.81    N/A
+    67108864       2097152    double    none      -1   192.80  348.08  261.06       0   184.86  363.02  272.26    N/A
+   134217728       4194304    double    none      -1   343.32  390.94  293.20       0   330.83  405.70  304.27    N/A
+   268435456       8388608    double    none      -1   658.31  407.77  305.82       0   625.77  428.97  321.73    N/A
+   536870912      16777216    double    none      -1  1251.59  428.95  321.71       0  1203.84  445.97  334.48    N/A
+  1073741824      33554432    double    none      -1  2397.77  447.81  335.86       0  2364.94  454.03  340.52    N/A
+  2147483648      67108864    double    none      -1  4592.43  467.61  350.71       0  4606.55  466.18  349.64    N/A
+  4294967296     134217728    double    none      -1  9092.04  472.39  354.29       0  9134.23  470.21  352.65    N/A
+  8589934592     268435456    double    none      -1  18089.9  474.85  356.13       0  18226.7  471.28  353.46    N/A
+ 17179869184     536870912    double    none      -1  36115.6  475.69  356.77       0  36282.0  473.51  355.13    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 319.021 
+#
+# Collective test concluded: alltoall_perf
+
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: sendrecv_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 680517 on cnode2-016 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 680518 on cnode2-016 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 680519 on cnode2-016 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 680520 on cnode2-016 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       4194304    double     sum      -1   225.44  148.84  148.84       0   225.77  148.62  148.62    N/A
+    67108864       8388608    double     sum      -1   425.11  157.86  157.86       0   425.46  157.73  157.73    N/A
+   134217728      16777216    double     sum      -1   823.88  162.91  162.91       0   831.73  161.37  161.37    N/A
+   268435456      33554432    double     sum      -1   893.65  300.38  300.38       0   901.33  297.82  297.82    N/A
+   536870912      67108864    double     sum      -1  1510.30  355.47  355.47       0  1510.07  355.53  355.53    N/A
+  1073741824     134217728    double     sum      -1  2970.36  361.49  361.49       0  2980.79  360.22  360.22    N/A
+  2147483648     268435456    double     sum      -1  5883.87  364.98  364.98       0  5911.58  363.27  363.27    N/A
+  4294967296     536870912    double     sum      -1  11718.4  366.51  366.51       0  11746.5  365.64  365.64    N/A
+  8589934592    1073741824    double     sum      -1  23405.3  367.01  367.01       0  23401.9  367.06  367.06    N/A
+ 17179869184    2147483648    double     sum      -1  46721.6  367.71  367.71       0  46696.8  367.90  367.90    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 294.916 
+#
+# Collective test concluded: sendrecv_perf
+
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: all_reduce_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 680668 on cnode2-016 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 680669 on cnode2-016 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 680670 on cnode2-016 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 680671 on cnode2-016 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       4194304    double     sum      -1   171.49  195.66  293.49       0   171.00  196.22  294.34       0
+    67108864       8388608    double     sum      -1   323.50  207.45  311.17       0   323.30  207.58  311.36       0
+   134217728      16777216    double     sum      -1   611.44  219.51  329.27       0   612.80  219.02  328.53       0
+   268435456      33554432    double     sum      -1  1179.96  227.50  341.24       0  1177.16  228.04  342.06       0
+   536870912      67108864    double     sum      -1  2304.29  232.99  349.48       0  2305.48  232.87  349.30       0
+  1073741824     134217728    double     sum      -1  4527.37  237.17  355.75       0  4509.16  238.12  357.19       0
+  2147483648     268435456    double     sum      -1  8928.56  240.52  360.78       0  8919.09  240.77  361.16       0
+  4294967296     536870912    double     sum      -1  17659.1  243.22  364.82       0  17669.1  243.08  364.62       0
+  8589934592    1073741824    double     sum      -1  35179.7  244.17  366.26       0  35120.6  244.58  366.88       0
+ 17179869184    2147483648    double     sum      -1  70042.1  245.28  367.92       0  70001.7  245.42  368.13       0
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 344.187 
+#
+# Collective test concluded: all_reduce_perf
+
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: all_gather_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 680817 on cnode2-016 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 680818 on cnode2-016 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 680819 on cnode2-016 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 680820 on cnode2-016 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       1048576    double    none      -1   110.70  303.11  227.33       0   107.27  312.80  234.60       0
+    67108864       2097152    double    none      -1   192.37  348.86  261.64       0   189.77  353.64  265.23       0
+   134217728       4194304    double    none      -1   349.98  383.50  287.63       0   345.81  388.12  291.09       0
+   268435456       8388608    double    none      -1   661.76  405.64  304.23       0   653.60  410.70  308.03       0
+   536870912      16777216    double    none      -1  1269.08  423.04  317.28       0  1255.37  427.66  320.75       0
+  1073741824      33554432    double    none      -1  2476.51  433.57  325.18       0  2430.70  441.74  331.31       0
+  2147483648      67108864    double    none      -1  4822.84  445.27  333.95       0  4694.46  457.45  343.09       0
+  4294967296     134217728    double    none      -1  9542.96  450.07  337.55       0  9135.84  470.12  352.59       0
+  8589934592     268435456    double    none      -1  18705.9  459.21  344.41       0  17983.3  477.66  358.25       0
+ 17179869184     536870912    double    none      -1  37045.4  463.75  347.81       0  35707.0  481.13  360.85       0
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 312.639 
+#
+# Collective test concluded: all_gather_perf
+
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: reduce_scatter_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 680986 on cnode2-016 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 680987 on cnode2-016 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 680988 on cnode2-016 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 680989 on cnode2-016 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       1048576    double     sum      -1   105.45  318.22  238.66       0   102.72  326.65  244.99       0
+    67108864       2097152    double     sum      -1   193.10  347.53  260.65       0   190.48  352.31  264.23       0
+   134217728       4194304    double     sum      -1   354.02  379.13  284.34       0   352.98  380.24  285.18       0
+   268435456       8388608    double     sum      -1   675.26  397.53  298.14       0   671.23  399.92  299.94       0
+   536870912      16777216    double     sum      -1  1304.47  411.56  308.67       0  1298.05  413.60  310.20       0
+  1073741824      33554432    double     sum      -1  2524.33  425.36  319.02       0  2514.07  427.09  320.32       0
+  2147483648      67108864    double     sum      -1  4859.60  441.91  331.43       0  4841.58  443.55  332.66       0
+  4294967296     134217728    double     sum      -1  9485.94  452.77  339.58       0  9354.32  459.14  344.36       0
+  8589934592     268435456    double     sum      -1  18523.2  463.74  347.80       0  18251.1  470.65  352.99       0
+ 17179869184     536870912    double     sum      -1  36381.9  472.21  354.16       0  36207.7  474.48  355.86       0
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 309.659 
+#
+# Collective test concluded: reduce_scatter_perf
+

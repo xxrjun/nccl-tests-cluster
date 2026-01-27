@@ -1,0 +1,52 @@
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 355542 on cnode2-006 device  0 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 353759 on cnode2-007 device  0 [0000:c3:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       2097152    double    none      -1  1291.91   25.97   12.99       0  1269.75   26.43   13.21    N/A
+    67108864       4194304    double    none      -1  2504.14   26.80   13.40       0  2503.21   26.81   13.40    N/A
+   134217728       8388608    double    none      -1  4975.11   26.98   13.49       0  4980.13   26.95   13.48    N/A
+   268435456      16777216    double    none      -1  9917.51   27.07   13.53       0  9924.69   27.05   13.52    N/A
+   536870912      33554432    double    none      -1  19806.6   27.11   13.55       0  19819.4   27.09   13.54    N/A
+  1073741824      67108864    double    none      -1  39600.3   27.11   13.56       0  39608.5   27.11   13.55    N/A
+  2147483648     134217728    double    none      -1  79227.1   27.11   13.55       0  79180.9   27.12   13.56    N/A
+  4294967296     268435456    double    none      -1   158906   27.03   13.51       0   158661   27.07   13.54    N/A
+  8589934592     536870912    double    none      -1   318038   27.01   13.50       0   317055   27.09   13.55    N/A
+ 17179869184    1073741824    double    none      -1   635179   27.05   13.52       0   633212   27.13   13.57    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 13.4768 
+#
+# Collective test concluded: alltoall_perf
+
+# nccl-tests version 2.17.6 nccl-headers=22807 nccl-library=22807
+# Collective test starting: sendrecv_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 17179869184 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 356130 on cnode2-006 device  0 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 354470 on cnode2-007 device  0 [0000:c3:00] NVIDIA H100 80GB HBM3
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554432       4194304    double     sum      -1  2518.73   13.32   13.32       0  2508.05   13.38   13.38    N/A
+    67108864       8388608    double     sum      -1  4977.23   13.48   13.48       0  4973.27   13.49   13.49    N/A
+   134217728      16777216    double     sum      -1  9908.92   13.55   13.55       0  9910.12   13.54   13.54    N/A
+   268435456      33554432    double     sum      -1  19795.1   13.56   13.56       0  19796.1   13.56   13.56    N/A
+   536870912      67108864    double     sum      -1  39568.9   13.57   13.57       0  39566.6   13.57   13.57    N/A
+  1073741824     134217728    double     sum      -1  79145.1   13.57   13.57       0  79127.5   13.57   13.57    N/A
+  2147483648     268435456    double     sum      -1   158239   13.57   13.57       0   158240   13.57   13.57    N/A
+  4294967296     536870912    double     sum      -1   316505   13.57   13.57       0   316813   13.56   13.56    N/A
+  8589934592    1073741824    double     sum      -1   633308   13.56   13.56       0   633644   13.56   13.56    N/A
+ 17179869184    2147483648    double     sum      -1  1266848   13.56   13.56       0  1266003   13.57   13.57    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 13.534 
+#
+# Collective test concluded: sendrecv_perf
+
