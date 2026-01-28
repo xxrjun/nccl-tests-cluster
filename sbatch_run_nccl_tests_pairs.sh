@@ -107,6 +107,9 @@ JOB_TIME_LIMIT=${JOB_TIME_LIMIT:-"00:50:00"}
 
 # Default binaries - kept minimal for pairwise to reduce test time
 DEFAULT_RUN_BIN=(
+  all_reduce_perf
+  all_gather_perf
+  reduce_scatter_perf
   alltoall_perf
   sendrecv_perf
 )
