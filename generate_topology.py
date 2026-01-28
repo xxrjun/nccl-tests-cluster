@@ -215,11 +215,52 @@ def validate_df(df: pd.DataFrame) -> None:
 # ===========================================================
 
 
-def normalize_pair(nodes_str: str) -> Tuple[str, str]:
-    """Parse a comma-separated node pair string into a sorted tuple.
+def expand_compressed_nodelist(compressed: str) -> List[str]:
+    """Expand SLURM-style compressed nodelist to individual node names.
     
+    Examples:
+        'cnode2-[001-003]' -> ['cnode2-001', 'cnode2-002', 'cnode2-003']
+        'cnode2-[001,003]' -> ['cnode2-001', 'cnode2-003']
+        'cnode2-001' -> ['cnode2-001']
+    """
+    import re
+    
+    # Pattern: prefix[range] where range can be 001-003 or 001,003
+    match = re.match(r'^(.+?)\[([^\]]+)\]$', compressed.strip())
+    if not match:
+        # No brackets, return as single node
+        return [compressed.strip()]
+    
+    prefix = match.group(1)
+    range_part = match.group(2)
+    nodes = []
+    
+    for part in range_part.split(','):
+        part = part.strip()
+        if '-' in part:
+            # Range like 001-003
+            start_str, end_str = part.split('-', 1)
+            width = len(start_str)
+            start = int(start_str)
+            end = int(end_str)
+            for i in range(start, end + 1):
+                nodes.append(f"{prefix}{i:0{width}d}")
+        else:
+            # Single number like 001
+            nodes.append(f"{prefix}{part}")
+    
+    return nodes
+
+
+def normalize_pair(nodes_str: str) -> Tuple[str, str]:
+    """Parse a node pair string into a sorted tuple.
+    
+    Supports both formats:
+        - Comma-separated: 'nodeA,nodeB' or '"nodeA, nodeB"'
+        - Compressed SLURM-style: 'cnode2-[001-002]' or 'cnode2-[001,003]'
+        
     Args:
-        nodes_str: String like '"nodeA, nodeB"' or 'nodeA,nodeB'
+        nodes_str: String with two node names
         
     Returns:
         Sorted tuple of two node names (a, b) where a <= b
@@ -228,6 +269,18 @@ def normalize_pair(nodes_str: str) -> Tuple[str, str]:
         ValueError: If string doesn't contain exactly two node names
     """
     s = nodes_str.strip().strip('"').strip("'")
+    
+    # Check if it's compressed SLURM format (contains brackets)
+    if '[' in s and ']' in s:
+        expanded = expand_compressed_nodelist(s)
+        if len(expanded) != 2:
+            raise ValueError(
+                f"Invalid nodes field (expect exactly two nodes): {nodes_str!r} expanded to {expanded}"
+            )
+        a, b = sorted(expanded)
+        return (a, b)
+    
+    # Traditional comma-separated format
     parts = [x.strip() for x in s.split(",") if x.strip()]
     if len(parts) != 2:
         raise ValueError(
@@ -1068,8 +1121,8 @@ def process_multi_g(
                 ax_list[j].axis("off")
 
             # Use tight_layout first, then manually position colorbar and title
-            fig.tight_layout(rect=[0, 0, 0.94, 0.92])  # Leave space for colorbar (right) and title (top)
-            cbar_ax = fig.add_axes([0.95, 0.12, 0.015, 0.76])  # [left, bottom, width, height]
+            fig.tight_layout(rect=[0, 0.05, 0.94, 0.92])  # Leave space for colorbar (right), title (top), and labels (bottom)
+            cbar_ax = fig.add_axes([0.95, 0.15, 0.015, 0.72])  # [left, bottom, width, height]
             add_colorbar(
                 fig,
                 cbar_ax,
@@ -1217,7 +1270,8 @@ def main():
     args = parse_args()
     validate_args(args)
 
-    csv_path = pathlib.Path(args.csv)
+    # Use resolve() to handle symlinks properly
+    csv_path = pathlib.Path(args.csv).resolve()
     if not csv_path.exists():
         raise FileNotFoundError(csv_path)
 

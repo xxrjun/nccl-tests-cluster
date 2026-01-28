@@ -1,0 +1,44 @@
+# nccl-tests version 2.17.8 nccl-headers=22902 nccl-library=22902
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 4294967296 maxBytes 34359738368 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 1393888 on cnode3-004 device  0 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 1362726 on cnode3-009 device  0 [0000:d1:00] NVIDIA H100 80GB HBM3
+#
+# Reducing maxBytes to 26549638485 due to memory limitation
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+  4294967296     268435456    double    none      -1  59551.0   72.12   36.06       0  53807.4   79.82   39.91    N/A
+  8589934592     536870912    double    none      -1   116025   74.04   37.02       0   105153   81.69   40.84    N/A
+ 17179869184    1073741824    double    none      -1   232733   73.82   36.91       0   215761   79.62   39.81    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 38.4259 
+#
+# Collective test concluded: alltoall_perf
+#
+
+# nccl-tests version 2.17.8 nccl-headers=22902 nccl-library=22902
+# Collective test starting: sendrecv_perf
+# nThread 1 nGpus 1 minBytes 4294967296 maxBytes 34359738368 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 1395690 on cnode3-004 device  0 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 1365175 on cnode3-009 device  0 [0000:d1:00] NVIDIA H100 80GB HBM3
+#
+# Reducing maxBytes to 26549638485 due to memory limitation
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+  4294967296     536870912    double     sum      -1   108195   39.70   39.70       0   108113   39.73   39.73    N/A
+  8589934592    1073741824    double     sum      -1   216588   39.66   39.66       0   216408   39.69   39.69    N/A
+ 17179869184    2147483648    double     sum      -1   420716   40.83   40.83       0   420423   40.86   40.86    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 40.0791 
+#
+# Collective test concluded: sendrecv_perf
+#
+
