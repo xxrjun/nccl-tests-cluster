@@ -1,4 +1,5 @@
-nccl
+nccl/
+__pycache__/
 
 _debug.log
 # benchmarks

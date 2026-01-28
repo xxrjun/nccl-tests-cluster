@@ -62,7 +62,12 @@ setup_directories() {
 
   if [[ "$log_dir_set" -eq 0 ]]; then
     mkdir -p "${results_root}/runs"
-    ln -sfn "$run_dir" "$results_root/latest"
+    # Create a proper relative symlink: extract just the run ID from run_dir
+    # run_dir is like "benchmarks/cluster/pairwise/runs/20260128-010702"
+    # We need "runs/<run_id>" relative to results_root
+    local run_id
+    run_id=$(basename "$run_dir")
+    ln -sfn "runs/$run_id" "$results_root/latest"
   fi
 }
 

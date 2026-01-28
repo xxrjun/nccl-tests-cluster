@@ -67,10 +67,84 @@ RE_FILE_NG_NODES = re.compile(
     r"_N(\d+)_G(\d+)(?:_([^.]+?)(?<!_debug))?\.log$", re.IGNORECASE
 )
 
+# Pattern to extract node names from log content (e.g., "on cnode3-002 device")
+RE_NODE_IN_LOG = re.compile(r"on\s+(\S+)\s+device", re.MULTILINE)
+
+# Pattern to split node name into prefix and numeric suffix (e.g., "cnode3-002" -> "cnode3-", "002")
+RE_NODE_SPLIT = re.compile(r"^(.+?)(\d+)$")
+
 
 # ===========================================================
 # Helper functions
 # ===========================================================
+
+
+def compress_nodelist(nodes: List[str]) -> str:
+    """
+    Compress a list of node names into SLURM-style compressed format.
+    
+    Examples:
+        ["cnode3-002", "cnode3-003", "cnode3-004"] -> "cnode3-[002-004]"
+        ["node01", "node02", "node05"] -> "node[01-02,05]"
+        ["a1", "a2", "b1"] -> "a[1-2],b1"
+    """
+    if not nodes:
+        return ""
+    if len(nodes) == 1:
+        return nodes[0]
+    
+    # Group nodes by prefix
+    groups: Dict[str, List[Tuple[str, int]]] = {}  # prefix -> [(original_suffix_str, suffix_int), ...]
+    ungrouped: List[str] = []
+    
+    for node in sorted(nodes):
+        m = RE_NODE_SPLIT.match(node)
+        if m:
+            prefix = m.group(1)
+            suffix_str = m.group(2)
+            suffix_int = int(suffix_str)
+            if prefix not in groups:
+                groups[prefix] = []
+            groups[prefix].append((suffix_str, suffix_int))
+        else:
+            ungrouped.append(node)
+    
+    result_parts: List[str] = []
+    
+    for prefix in sorted(groups.keys()):
+        suffixes = groups[prefix]
+        # Sort by numeric value
+        suffixes.sort(key=lambda x: x[1])
+        
+        # Find consecutive ranges
+        ranges: List[List[Tuple[str, int]]] = []
+        current_range: List[Tuple[str, int]] = [suffixes[0]]
+        
+        for i in range(1, len(suffixes)):
+            if suffixes[i][1] == current_range[-1][1] + 1:
+                current_range.append(suffixes[i])
+            else:
+                ranges.append(current_range)
+                current_range = [suffixes[i]]
+        ranges.append(current_range)
+        
+        # Format ranges
+        range_strs: List[str] = []
+        for r in ranges:
+            if len(r) == 1:
+                range_strs.append(r[0][0])  # Single node, use original suffix string
+            else:
+                # Range: preserve zero-padding from first element
+                range_strs.append(f"{r[0][0]}-{r[-1][0]}")
+        
+        if len(range_strs) == 1 and "-" not in range_strs[0]:
+            # Single node with this prefix
+            result_parts.append(f"{prefix}{range_strs[0]}")
+        else:
+            result_parts.append(f"{prefix}[{','.join(range_strs)}]")
+    
+    result_parts.extend(sorted(ungrouped))
+    return ",".join(result_parts)
 
 
 def human_bytes(n: Optional[int]) -> str:
@@ -156,10 +230,27 @@ def parse_section_metrics(section_text: str) -> Dict[str, Optional[float]]:
     }
 
 
-def infer_ng_nodes(file_path: str) -> Tuple[Optional[int], Optional[int], List[str]]:
+def extract_nodes_from_content(text: str) -> List[str]:
+    """
+    Extract unique node names from log content.
+    Looks for pattern: "on <nodename> device" in rank listings.
+    Returns sorted list of unique node names.
+    """
+    matches = RE_NODE_IN_LOG.findall(text)
+    # Return unique nodes in sorted order
+    return sorted(set(matches))
+
+
+def infer_ng_nodes(
+    file_path: str, text: Optional[str] = None
+) -> Tuple[Optional[int], Optional[int], List[str]]:
     """
     Infer N, G, and a list of node names from filename pattern:
       ..._N{N}_G{G}[_node1_node2_...].log
+    
+    If nodes are not in filename but text content is provided,
+    extract nodes from log content (useful for multi-node logs).
+    
     Returns (N, G, nodes_list). If absent, N/G are None and nodes_list is [].
     """
     base = os.path.basename(file_path)
@@ -173,6 +264,9 @@ def infer_ng_nodes(file_path: str) -> Tuple[Optional[int], Optional[int], List[s
         # Split the whole tail by underscores; keep non-empty tokens
         # (Allow hyphens etc. inside a token; we do not further split.)
         nodes_list = [tok for tok in m.group(3).split("_") if tok]
+    elif text and N and N > 1:
+        # For multi-node logs without nodes in filename, extract from content
+        nodes_list = extract_nodes_from_content(text)
     return N, G, nodes_list
 
 
@@ -208,7 +302,7 @@ def format_table(rows: List[Dict[str, object]]) -> str:
     def nodes_to_str(ns: Optional[List[str]]) -> str:
         if not ns:
             return ""
-        return ",".join(ns)
+        return compress_nodelist(ns)
 
     # Transform rows -> strings
     str_rows: List[List[str]] = []
@@ -256,7 +350,7 @@ def save_csv(rows: List[Dict[str, object]], path: str) -> None:
         w = csv.writer(f)
         w.writerow(headers)
         for r in rows:
-            nodes_str = ",".join(r.get("nodes", [])) if r.get("nodes") else ""
+            nodes_str = compress_nodelist(r.get("nodes", [])) if r.get("nodes") else ""
             w.writerow(
                 [
                     r.get("file", ""),
@@ -313,7 +407,7 @@ def save_md(rows: List[Dict[str, object]], path: str) -> None:
     def nodes_to_str(ns: Optional[List[str]]) -> str:
         if not ns:
             return ""
-        return ",".join(ns)
+        return compress_nodelist(ns)
 
     def row_to_list(r: Dict[str, object]) -> List[str]:
         return [
@@ -369,7 +463,8 @@ def process_logs_in_dir(root: str) -> Tuple[List[Dict[str, object]], List[str]]:
             failed_files.append(basename)
             continue
 
-        N, G, nodes_list = infer_ng_nodes(path)
+        # Pass text content to extract nodes from log if not in filename
+        N, G, nodes_list = infer_ng_nodes(path, text)
 
         for test_name, section_text in sections:
             metrics = parse_section_metrics(section_text)
@@ -455,7 +550,7 @@ def generate_failure_summary(
     if failed_tests:
         summary.append("\nFailed tests (no bandwidth data):")
         for t in failed_tests:
-            nodes_str = ",".join(t.get("nodes", [])) if t.get("nodes") else "N/A"
+            nodes_str = compress_nodelist(t.get("nodes", [])) if t.get("nodes") else "N/A"
             summary.append(
                 f"  - {t['file']}: {t['test']} (N={t.get('N', 'N/A')}, G={t.get('G', 'N/A')}, nodes={nodes_str})"
             )
@@ -463,7 +558,7 @@ def generate_failure_summary(
     if missing_data_tests:
         summary.append("\nTests with partial data (missing avg or peak bandwidth):")
         for t in missing_data_tests:
-            nodes_str = ",".join(t.get("nodes", [])) if t.get("nodes") else "N/A"
+            nodes_str = compress_nodelist(t.get("nodes", [])) if t.get("nodes") else "N/A"
             missing_parts = []
             if t.get("avg_bus_bw") is None:
                 missing_parts.append("avg_bw")
@@ -548,7 +643,8 @@ def main():
     )
     args = ap.parse_args()
 
-    input_path = os.path.abspath(args.input)
+    # Use realpath to resolve symlinks, ensuring the path works from any directory
+    input_path = os.path.realpath(args.input)
 
     with_debug_logs = os.path.join(input_path, "with-debug", "logs")
     without_debug_logs = os.path.join(input_path, "without-debug", "logs")

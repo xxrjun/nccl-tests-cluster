@@ -275,9 +275,22 @@ def plot_bandwidth_single_node(
     plot_dir = Path(out_dir) / "plots" / test_name
     plot_dir.mkdir(parents=True, exist_ok=True)
 
-    # Color palette for consistent colors
-    colors = plt.cm.tab10(np.linspace(0, 1, max(len(nodes), 10)))
-    node_colors = {node: colors[i % len(colors)] for i, node in enumerate(sorted(nodes))}
+    # Color palette with darker, more distinguishable colors
+    DARK_COLORS = [
+        '#1f77b4',  # blue
+        '#d62728',  # red
+        '#2ca02c',  # green
+        '#ff7f0e',  # orange
+        '#9467bd',  # purple
+        '#8c564b',  # brown
+        '#e377c2',  # pink
+        '#17becf',  # cyan
+        '#bcbd22',  # olive
+        '#7f7f7f',  # gray
+    ]
+    MARKERS = ['o', 's', '^', 'D', 'v', 'p', 'h', '*', 'X', 'P']
+    node_colors = {node: DARK_COLORS[i % len(DARK_COLORS)] for i, node in enumerate(sorted(nodes))}
+    node_markers = {node: MARKERS[i % len(MARKERS)] for i, node in enumerate(sorted(nodes))}
 
     # Individual node plots
     for node in nodes:
@@ -290,7 +303,7 @@ def plot_bandwidth_single_node(
         sizes = node_df["size_bytes"].values
         bw = node_df[metric].values
 
-        ax.plot(sizes, bw, marker="o", linewidth=2, markersize=6, color=node_colors[node])
+        ax.plot(sizes, bw, marker=node_markers[node], linewidth=2, markersize=6, color=node_colors[node])
         
         ax.set_xscale("log", base=2)
         ax.set_xlabel("Message Size")
@@ -334,12 +347,11 @@ def plot_bandwidth_single_node(
 
         ax.plot(
             sizes, bw,
-            marker="o",
+            marker=node_markers[node],
             linewidth=2,
-            markersize=5,
+            markersize=6,
             label=node,
             color=node_colors[node],
-            alpha=0.8,
         )
 
     ax.set_xscale("log", base=2)
@@ -391,8 +403,14 @@ def plot_bandwidth_pairwise(
     plot_dir = Path(out_dir) / "plots" / test_name
     plot_dir.mkdir(parents=True, exist_ok=True)
 
-    # Color palette
-    colors = plt.cm.tab20(np.linspace(0, 1, max(len(pairs), 20)))
+    # Color palette with darker colors
+    DARK_COLORS = [
+        '#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd',
+        '#8c564b', '#e377c2', '#17becf', '#bcbd22', '#7f7f7f',
+        '#393b79', '#637939', '#8c6d31', '#843c39', '#7b4173',
+        '#5254a3', '#8ca252', '#bd9e39', '#ad494a', '#a55194',
+    ]
+    MARKERS = ['o', 's', '^', 'D', 'v', 'p', 'h', '*', 'X', 'P']
 
     # Combined plot for all pairs
     fig, ax = plt.subplots(figsize=(14, 8))
@@ -407,12 +425,11 @@ def plot_bandwidth_pairwise(
 
         ax.plot(
             sizes, bw,
-            marker="o",
+            marker=MARKERS[i % len(MARKERS)],
             linewidth=1.5,
-            markersize=4,
+            markersize=5,
             label=pair,
-            color=colors[i % len(colors)],
-            alpha=0.7,
+            color=DARK_COLORS[i % len(DARK_COLORS)],
         )
 
     ax.set_xscale("log", base=2)
@@ -436,6 +453,94 @@ def plot_bandwidth_pairwise(
         fig.subplots_adjust(right=0.75)
 
     combined_path = plot_dir / f"G{g_value}_pairwise_combined.png"
+    fig.savefig(combined_path)
+    plt.close(fig)
+    print(f"Saved: {combined_path}")
+
+    return str(combined_path)
+
+
+def plot_bandwidth_multi_node(
+    df: pd.DataFrame,
+    test_name: str,
+    out_dir: str,
+    metric: str = "busbw_GBs",
+) -> Optional[str]:
+    """
+    Generate bandwidth plots for multi-node (N>1) test results.
+    Shows bandwidth across message sizes for different G values.
+    Each line represents a different GPU count (G) value.
+    """
+    if df.empty:
+        return None
+
+    # Filter for multi-node results (N > 1)
+    df_multi = df[df["N"] > 1].copy()
+    if df_multi.empty:
+        return None
+
+    # Get N value (should be same for all rows in a multi-node run)
+    n_value = df_multi["N"].iloc[0]
+    g_values = sorted(df_multi["G"].unique())
+    test_short = test_name.replace("_perf", "")
+    metric_label = "Bus Bandwidth" if metric == "busbw_GBs" else "Algorithm Bandwidth"
+
+    # Create output directory
+    plot_dir = Path(out_dir) / "plots" / test_name
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    # Color palette with darker, distinguishable colors
+    DARK_COLORS = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#17becf', '#bcbd22']
+    MARKERS = ['o', 's', '^', 'D', 'v', 'p', 'h', '*']
+
+    # Combined plot for all G values
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    for i, g in enumerate(g_values):
+        g_df = df_multi[df_multi["G"] == g].sort_values("size_bytes")
+        if g_df.empty:
+            continue
+
+        sizes = g_df["size_bytes"].values
+        bw = g_df[metric].values
+
+        ax.plot(
+            sizes, bw,
+            marker=MARKERS[i % len(MARKERS)],
+            linewidth=2,
+            markersize=7,
+            label=f"G={int(g)}",
+            color=DARK_COLORS[i % len(DARK_COLORS)],
+        )
+
+        # Annotate peak
+        if len(bw) > 0:
+            peak_bw = bw.max()
+            peak_idx = bw.argmax()
+            ax.annotate(
+                f"{peak_bw:.1f}",
+                xy=(sizes[peak_idx], peak_bw),
+                xytext=(5, 5),
+                textcoords="offset points",
+                fontsize=8,
+                color=DARK_COLORS[i % len(DARK_COLORS)],
+            )
+
+    ax.set_xscale("log", base=2)
+    ax.set_xlabel("Message Size")
+    ax.set_ylabel(f"{metric_label} (GB/s)")
+    ax.set_title(f"{test_short} - Multi-Node (N={int(n_value)}) Bandwidth vs Message Size")
+
+    # Set x-axis ticks
+    all_sizes = df_multi["size_bytes"].unique()
+    all_sizes.sort()
+    ax.set_xticks(all_sizes)
+    ax.set_xticklabels([human_bytes(s) for s in all_sizes], rotation=45, ha="right")
+
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="best", title="GPUs per Node", framealpha=0.9)
+
+    combined_path = plot_dir / f"N{int(n_value)}_multi_node.png"
     fig.savefig(combined_path)
     plt.close(fig)
     print(f"Saved: {combined_path}")
@@ -475,6 +580,7 @@ def plot_all(
     g_values = [g_filter] if g_filter else sorted(df["G"].dropna().unique())
 
     for test in tests:
+        # Single-node and pairwise: iterate by G value
         for g in g_values:
             df_filtered = df[(df["test"] == test) & (df["G"] == g)]
             if df_filtered.empty:
@@ -490,6 +596,18 @@ def plot_all(
 
             if 2 in df_filtered["N"].values:
                 path = plot_bandwidth_pairwise(df_filtered, test, int(g), out_dir, metric)
+                if path:
+                    generated_plots.append(path)
+
+        # Multi-node: plot all G values together for each test
+        df_test = df[df["test"] == test]
+        if any(df_test["N"] > 1):
+            df_multi = df_test[df_test["N"] > 1]
+            if g_filter:
+                df_multi = df_multi[df_multi["G"] == g_filter]
+            if not df_multi.empty:
+                print(f"\nProcessing multi-node: {test}")
+                path = plot_bandwidth_multi_node(df_multi, test, out_dir, metric)
                 if path:
                     generated_plots.append(path)
 
@@ -539,11 +657,12 @@ def main():
     )
     args = parser.parse_args()
 
-    input_path = os.path.abspath(args.input)
+    # Use realpath to resolve symlinks, ensuring the path works from any directory
+    input_path = os.path.realpath(args.input)
     
     # Determine output directory
     if args.out_dir:
-        out_dir = os.path.abspath(args.out_dir)
+        out_dir = os.path.realpath(args.out_dir)
     elif os.path.basename(input_path) == "logs":
         out_dir = os.path.dirname(input_path)
     else:
