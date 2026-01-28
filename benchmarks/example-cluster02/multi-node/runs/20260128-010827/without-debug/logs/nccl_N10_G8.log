@@ -1,0 +1,500 @@
+# nccl-tests version 2.17.8 nccl-headers=22902 nccl-library=22902
+# Collective test starting: all_reduce_perf
+# nThread 1 nGpus 1 minBytes 4294967296 maxBytes 68719476736 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 2670801 on cnode3-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 2670802 on cnode3-002 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 2670803 on cnode3-002 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 2670804 on cnode3-002 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 2670805 on cnode3-002 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 2670806 on cnode3-002 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 2670807 on cnode3-002 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 2670808 on cnode3-002 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 1243988 on cnode3-003 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 1243989 on cnode3-003 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 10 Group  0 Pid 1243990 on cnode3-003 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 11 Group  0 Pid 1243991 on cnode3-003 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 12 Group  0 Pid 1243992 on cnode3-003 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 13 Group  0 Pid 1243993 on cnode3-003 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 14 Group  0 Pid 1243994 on cnode3-003 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 15 Group  0 Pid 1243995 on cnode3-003 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 16 Group  0 Pid 1665839 on cnode3-004 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 17 Group  0 Pid 1665840 on cnode3-004 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 18 Group  0 Pid 1665841 on cnode3-004 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 19 Group  0 Pid 1665842 on cnode3-004 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 20 Group  0 Pid 1665843 on cnode3-004 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 21 Group  0 Pid 1665844 on cnode3-004 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 22 Group  0 Pid 1665845 on cnode3-004 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 23 Group  0 Pid 1665846 on cnode3-004 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 24 Group  0 Pid 1761473 on cnode3-005 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 25 Group  0 Pid 1761474 on cnode3-005 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 26 Group  0 Pid 1761475 on cnode3-005 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 27 Group  0 Pid 1761476 on cnode3-005 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 28 Group  0 Pid 1761477 on cnode3-005 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 29 Group  0 Pid 1761478 on cnode3-005 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 30 Group  0 Pid 1761479 on cnode3-005 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 31 Group  0 Pid 1761480 on cnode3-005 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 32 Group  0 Pid 1658504 on cnode3-006 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 33 Group  0 Pid 1658505 on cnode3-006 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 34 Group  0 Pid 1658506 on cnode3-006 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 35 Group  0 Pid 1658507 on cnode3-006 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 36 Group  0 Pid 1658508 on cnode3-006 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 37 Group  0 Pid 1658509 on cnode3-006 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 38 Group  0 Pid 1658510 on cnode3-006 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 39 Group  0 Pid 1658511 on cnode3-006 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 40 Group  0 Pid 2549854 on cnode3-007 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 41 Group  0 Pid 2549855 on cnode3-007 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 42 Group  0 Pid 2549856 on cnode3-007 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 43 Group  0 Pid 2549857 on cnode3-007 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 44 Group  0 Pid 2549858 on cnode3-007 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 45 Group  0 Pid 2549859 on cnode3-007 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 46 Group  0 Pid 2549861 on cnode3-007 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 47 Group  0 Pid 2549862 on cnode3-007 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 48 Group  0 Pid 1636912 on cnode3-008 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 49 Group  0 Pid 1636913 on cnode3-008 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 50 Group  0 Pid 1636914 on cnode3-008 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 51 Group  0 Pid 1636915 on cnode3-008 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 52 Group  0 Pid 1636916 on cnode3-008 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 53 Group  0 Pid 1636917 on cnode3-008 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 54 Group  0 Pid 1636918 on cnode3-008 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 55 Group  0 Pid 1636919 on cnode3-008 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 56 Group  0 Pid 1637292 on cnode3-009 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 57 Group  0 Pid 1637293 on cnode3-009 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 58 Group  0 Pid 1637294 on cnode3-009 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 59 Group  0 Pid 1637295 on cnode3-009 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 60 Group  0 Pid 1637296 on cnode3-009 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 61 Group  0 Pid 1637297 on cnode3-009 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 62 Group  0 Pid 1637298 on cnode3-009 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 63 Group  0 Pid 1637299 on cnode3-009 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 64 Group  0 Pid 1624936 on cnode3-010 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 65 Group  0 Pid 1624938 on cnode3-010 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 66 Group  0 Pid 1624941 on cnode3-010 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 67 Group  0 Pid 1624943 on cnode3-010 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 68 Group  0 Pid 1624944 on cnode3-010 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 69 Group  0 Pid 1624945 on cnode3-010 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 70 Group  0 Pid 1624946 on cnode3-010 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 71 Group  0 Pid 1624950 on cnode3-010 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 72 Group  0 Pid 1732651 on cnode3-011 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 73 Group  0 Pid 1732652 on cnode3-011 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 74 Group  0 Pid 1732653 on cnode3-011 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 75 Group  0 Pid 1732654 on cnode3-011 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 76 Group  0 Pid 1732655 on cnode3-011 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 77 Group  0 Pid 1732656 on cnode3-011 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 78 Group  0 Pid 1732657 on cnode3-011 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 79 Group  0 Pid 1732658 on cnode3-011 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#
+# Reducing maxBytes to 26549638485 due to memory limitation
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+  4294967296     536870912    double     sum      -1  27139.3  158.26  312.56       0  26892.9  159.71  315.42       0
+  8589934592    1073741824    double     sum      -1  53839.5  159.55  315.11       0  54042.9  158.95  313.92       0
+ 17179869184    2147483648    double     sum      -1   105225  163.27  322.45       0   106005  162.07  320.08       0
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 316.59 
+#
+# Collective test concluded: all_reduce_perf
+#
+
+# nccl-tests version 2.17.8 nccl-headers=22902 nccl-library=22902
+# Collective test starting: all_gather_perf
+# nThread 1 nGpus 1 minBytes 4294967296 maxBytes 68719476736 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 2672152 on cnode3-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 2672153 on cnode3-002 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 2672154 on cnode3-002 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 2672155 on cnode3-002 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 2672156 on cnode3-002 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 2672157 on cnode3-002 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 2672158 on cnode3-002 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 2672159 on cnode3-002 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 1245033 on cnode3-003 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 1245034 on cnode3-003 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 10 Group  0 Pid 1245035 on cnode3-003 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 11 Group  0 Pid 1245036 on cnode3-003 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 12 Group  0 Pid 1245037 on cnode3-003 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 13 Group  0 Pid 1245038 on cnode3-003 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 14 Group  0 Pid 1245039 on cnode3-003 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 15 Group  0 Pid 1245040 on cnode3-003 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 16 Group  0 Pid 1666775 on cnode3-004 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 17 Group  0 Pid 1666776 on cnode3-004 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 18 Group  0 Pid 1666777 on cnode3-004 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 19 Group  0 Pid 1666778 on cnode3-004 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 20 Group  0 Pid 1666779 on cnode3-004 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 21 Group  0 Pid 1666780 on cnode3-004 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 22 Group  0 Pid 1666781 on cnode3-004 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 23 Group  0 Pid 1666782 on cnode3-004 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 24 Group  0 Pid 1762699 on cnode3-005 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 25 Group  0 Pid 1762700 on cnode3-005 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 26 Group  0 Pid 1762701 on cnode3-005 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 27 Group  0 Pid 1762703 on cnode3-005 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 28 Group  0 Pid 1762704 on cnode3-005 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 29 Group  0 Pid 1762705 on cnode3-005 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 30 Group  0 Pid 1762706 on cnode3-005 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 31 Group  0 Pid 1762707 on cnode3-005 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 32 Group  0 Pid 1659517 on cnode3-006 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 33 Group  0 Pid 1659518 on cnode3-006 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 34 Group  0 Pid 1659519 on cnode3-006 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 35 Group  0 Pid 1659520 on cnode3-006 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 36 Group  0 Pid 1659521 on cnode3-006 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 37 Group  0 Pid 1659522 on cnode3-006 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 38 Group  0 Pid 1659523 on cnode3-006 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 39 Group  0 Pid 1659524 on cnode3-006 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 40 Group  0 Pid 2551191 on cnode3-007 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 41 Group  0 Pid 2551192 on cnode3-007 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 42 Group  0 Pid 2551193 on cnode3-007 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 43 Group  0 Pid 2551194 on cnode3-007 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 44 Group  0 Pid 2551195 on cnode3-007 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 45 Group  0 Pid 2551196 on cnode3-007 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 46 Group  0 Pid 2551197 on cnode3-007 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 47 Group  0 Pid 2551198 on cnode3-007 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 48 Group  0 Pid 1637929 on cnode3-008 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 49 Group  0 Pid 1637930 on cnode3-008 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 50 Group  0 Pid 1637931 on cnode3-008 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 51 Group  0 Pid 1637932 on cnode3-008 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 52 Group  0 Pid 1637933 on cnode3-008 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 53 Group  0 Pid 1637934 on cnode3-008 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 54 Group  0 Pid 1637935 on cnode3-008 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 55 Group  0 Pid 1637936 on cnode3-008 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 56 Group  0 Pid 1638343 on cnode3-009 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 57 Group  0 Pid 1638344 on cnode3-009 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 58 Group  0 Pid 1638345 on cnode3-009 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 59 Group  0 Pid 1638346 on cnode3-009 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 60 Group  0 Pid 1638347 on cnode3-009 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 61 Group  0 Pid 1638348 on cnode3-009 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 62 Group  0 Pid 1638349 on cnode3-009 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 63 Group  0 Pid 1638350 on cnode3-009 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 64 Group  0 Pid 1626009 on cnode3-010 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 65 Group  0 Pid 1626010 on cnode3-010 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 66 Group  0 Pid 1626011 on cnode3-010 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 67 Group  0 Pid 1626012 on cnode3-010 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 68 Group  0 Pid 1626013 on cnode3-010 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 69 Group  0 Pid 1626014 on cnode3-010 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 70 Group  0 Pid 1626015 on cnode3-010 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 71 Group  0 Pid 1626016 on cnode3-010 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 72 Group  0 Pid 1734040 on cnode3-011 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 73 Group  0 Pid 1734041 on cnode3-011 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 74 Group  0 Pid 1734042 on cnode3-011 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 75 Group  0 Pid 1734043 on cnode3-011 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 76 Group  0 Pid 1734044 on cnode3-011 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 77 Group  0 Pid 1734045 on cnode3-011 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 78 Group  0 Pid 1734046 on cnode3-011 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 79 Group  0 Pid 1734047 on cnode3-011 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#
+# Reducing maxBytes to 26549638485 due to memory limitation
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+  4294967040       6710886    double    none      -1  13674.8  314.08  310.15       0  13774.8  311.80  307.90       0
+  8589934080      13421772    double    none      -1  26792.9  320.61  316.60       0  26754.2  321.07  317.06       0
+ 17179868160      26843544    double    none      -1  53118.6  323.42  319.38       0  52247.0  328.82  324.71       0
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 315.967 
+#
+# Collective test concluded: all_gather_perf
+#
+
+# nccl-tests version 2.17.8 nccl-headers=22902 nccl-library=22902
+# Collective test starting: reduce_scatter_perf
+# nThread 1 nGpus 1 minBytes 4294967296 maxBytes 68719476736 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 2673191 on cnode3-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 2673194 on cnode3-002 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 2673196 on cnode3-002 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 2673197 on cnode3-002 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 2673198 on cnode3-002 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 2673199 on cnode3-002 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 2673201 on cnode3-002 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 2673204 on cnode3-002 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 1245968 on cnode3-003 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 1245969 on cnode3-003 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 10 Group  0 Pid 1245970 on cnode3-003 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 11 Group  0 Pid 1245971 on cnode3-003 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 12 Group  0 Pid 1245972 on cnode3-003 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 13 Group  0 Pid 1245973 on cnode3-003 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 14 Group  0 Pid 1245974 on cnode3-003 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 15 Group  0 Pid 1245975 on cnode3-003 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 16 Group  0 Pid 1668102 on cnode3-004 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 17 Group  0 Pid 1668103 on cnode3-004 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 18 Group  0 Pid 1668104 on cnode3-004 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 19 Group  0 Pid 1668105 on cnode3-004 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 20 Group  0 Pid 1668106 on cnode3-004 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 21 Group  0 Pid 1668107 on cnode3-004 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 22 Group  0 Pid 1668108 on cnode3-004 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 23 Group  0 Pid 1668109 on cnode3-004 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 24 Group  0 Pid 1763822 on cnode3-005 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 25 Group  0 Pid 1763823 on cnode3-005 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 26 Group  0 Pid 1763824 on cnode3-005 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 27 Group  0 Pid 1763825 on cnode3-005 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 28 Group  0 Pid 1763826 on cnode3-005 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 29 Group  0 Pid 1763827 on cnode3-005 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 30 Group  0 Pid 1763828 on cnode3-005 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 31 Group  0 Pid 1763829 on cnode3-005 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 32 Group  0 Pid 1660325 on cnode3-006 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 33 Group  0 Pid 1660326 on cnode3-006 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 34 Group  0 Pid 1660327 on cnode3-006 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 35 Group  0 Pid 1660328 on cnode3-006 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 36 Group  0 Pid 1660329 on cnode3-006 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 37 Group  0 Pid 1660330 on cnode3-006 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 38 Group  0 Pid 1660331 on cnode3-006 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 39 Group  0 Pid 1660332 on cnode3-006 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 40 Group  0 Pid 2552485 on cnode3-007 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 41 Group  0 Pid 2552486 on cnode3-007 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 42 Group  0 Pid 2552487 on cnode3-007 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 43 Group  0 Pid 2552488 on cnode3-007 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 44 Group  0 Pid 2552489 on cnode3-007 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 45 Group  0 Pid 2552490 on cnode3-007 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 46 Group  0 Pid 2552491 on cnode3-007 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 47 Group  0 Pid 2552492 on cnode3-007 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 48 Group  0 Pid 1638841 on cnode3-008 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 49 Group  0 Pid 1638842 on cnode3-008 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 50 Group  0 Pid 1638843 on cnode3-008 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 51 Group  0 Pid 1638844 on cnode3-008 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 52 Group  0 Pid 1638845 on cnode3-008 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 53 Group  0 Pid 1638846 on cnode3-008 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 54 Group  0 Pid 1638847 on cnode3-008 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 55 Group  0 Pid 1638848 on cnode3-008 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 56 Group  0 Pid 1639270 on cnode3-009 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 57 Group  0 Pid 1639271 on cnode3-009 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 58 Group  0 Pid 1639272 on cnode3-009 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 59 Group  0 Pid 1639273 on cnode3-009 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 60 Group  0 Pid 1639274 on cnode3-009 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 61 Group  0 Pid 1639275 on cnode3-009 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 62 Group  0 Pid 1639276 on cnode3-009 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 63 Group  0 Pid 1639277 on cnode3-009 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 64 Group  0 Pid 1626813 on cnode3-010 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 65 Group  0 Pid 1626814 on cnode3-010 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 66 Group  0 Pid 1626815 on cnode3-010 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 67 Group  0 Pid 1626816 on cnode3-010 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 68 Group  0 Pid 1626817 on cnode3-010 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 69 Group  0 Pid 1626818 on cnode3-010 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 70 Group  0 Pid 1626819 on cnode3-010 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 71 Group  0 Pid 1626820 on cnode3-010 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 72 Group  0 Pid 1735329 on cnode3-011 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 73 Group  0 Pid 1735330 on cnode3-011 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 74 Group  0 Pid 1735331 on cnode3-011 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 75 Group  0 Pid 1735332 on cnode3-011 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 76 Group  0 Pid 1735333 on cnode3-011 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 77 Group  0 Pid 1735334 on cnode3-011 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 78 Group  0 Pid 1735335 on cnode3-011 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 79 Group  0 Pid 1735336 on cnode3-011 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#
+# Reducing maxBytes to 26549638485 due to memory limitation
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+  4294967040       6710886    double     sum      -1  13574.9  316.39  312.43       0  13535.1  317.32  313.35       0
+  8589934080      13421772    double     sum      -1  26899.1  319.34  315.35       0  27164.6  316.22  312.27       0
+ 17179868160      26843544    double     sum      -1  52563.6  326.84  322.75       0  52733.2  325.79  321.72       0
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 316.312 
+#
+# Collective test concluded: reduce_scatter_perf
+#
+
+# nccl-tests version 2.17.8 nccl-headers=22902 nccl-library=22902
+# Collective test starting: alltoall_perf
+# nThread 1 nGpus 1 minBytes 4294967296 maxBytes 68719476736 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 2674604 on cnode3-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 2674605 on cnode3-002 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 2674606 on cnode3-002 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 2674607 on cnode3-002 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 2674608 on cnode3-002 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 2674609 on cnode3-002 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 2674611 on cnode3-002 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 2674612 on cnode3-002 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 1247003 on cnode3-003 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 1247004 on cnode3-003 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 10 Group  0 Pid 1247005 on cnode3-003 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 11 Group  0 Pid 1247006 on cnode3-003 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 12 Group  0 Pid 1247007 on cnode3-003 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 13 Group  0 Pid 1247008 on cnode3-003 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 14 Group  0 Pid 1247009 on cnode3-003 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 15 Group  0 Pid 1247010 on cnode3-003 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 16 Group  0 Pid 1669041 on cnode3-004 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 17 Group  0 Pid 1669042 on cnode3-004 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 18 Group  0 Pid 1669043 on cnode3-004 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 19 Group  0 Pid 1669044 on cnode3-004 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 20 Group  0 Pid 1669045 on cnode3-004 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 21 Group  0 Pid 1669046 on cnode3-004 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 22 Group  0 Pid 1669047 on cnode3-004 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 23 Group  0 Pid 1669048 on cnode3-004 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 24 Group  0 Pid 1765302 on cnode3-005 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 25 Group  0 Pid 1765303 on cnode3-005 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 26 Group  0 Pid 1765304 on cnode3-005 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 27 Group  0 Pid 1765305 on cnode3-005 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 28 Group  0 Pid 1765306 on cnode3-005 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 29 Group  0 Pid 1765307 on cnode3-005 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 30 Group  0 Pid 1765308 on cnode3-005 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 31 Group  0 Pid 1765309 on cnode3-005 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 32 Group  0 Pid 1661361 on cnode3-006 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 33 Group  0 Pid 1661362 on cnode3-006 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 34 Group  0 Pid 1661363 on cnode3-006 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 35 Group  0 Pid 1661364 on cnode3-006 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 36 Group  0 Pid 1661365 on cnode3-006 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 37 Group  0 Pid 1661366 on cnode3-006 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 38 Group  0 Pid 1661367 on cnode3-006 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 39 Group  0 Pid 1661368 on cnode3-006 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 40 Group  0 Pid 2553668 on cnode3-007 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 41 Group  0 Pid 2553669 on cnode3-007 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 42 Group  0 Pid 2553670 on cnode3-007 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 43 Group  0 Pid 2553671 on cnode3-007 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 44 Group  0 Pid 2553672 on cnode3-007 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 45 Group  0 Pid 2553673 on cnode3-007 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 46 Group  0 Pid 2553674 on cnode3-007 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 47 Group  0 Pid 2553675 on cnode3-007 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 48 Group  0 Pid 1639983 on cnode3-008 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 49 Group  0 Pid 1639984 on cnode3-008 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 50 Group  0 Pid 1639985 on cnode3-008 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 51 Group  0 Pid 1639986 on cnode3-008 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 52 Group  0 Pid 1639987 on cnode3-008 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 53 Group  0 Pid 1639988 on cnode3-008 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 54 Group  0 Pid 1639989 on cnode3-008 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 55 Group  0 Pid 1639990 on cnode3-008 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 56 Group  0 Pid 1640314 on cnode3-009 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 57 Group  0 Pid 1640315 on cnode3-009 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 58 Group  0 Pid 1640316 on cnode3-009 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 59 Group  0 Pid 1640317 on cnode3-009 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 60 Group  0 Pid 1640318 on cnode3-009 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 61 Group  0 Pid 1640319 on cnode3-009 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 62 Group  0 Pid 1640320 on cnode3-009 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 63 Group  0 Pid 1640321 on cnode3-009 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 64 Group  0 Pid 1627880 on cnode3-010 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 65 Group  0 Pid 1627881 on cnode3-010 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 66 Group  0 Pid 1627882 on cnode3-010 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 67 Group  0 Pid 1627883 on cnode3-010 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 68 Group  0 Pid 1627884 on cnode3-010 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 69 Group  0 Pid 1627885 on cnode3-010 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 70 Group  0 Pid 1627886 on cnode3-010 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 71 Group  0 Pid 1627887 on cnode3-010 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 72 Group  0 Pid 1736557 on cnode3-011 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 73 Group  0 Pid 1736558 on cnode3-011 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 74 Group  0 Pid 1736559 on cnode3-011 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 75 Group  0 Pid 1736560 on cnode3-011 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 76 Group  0 Pid 1736561 on cnode3-011 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 77 Group  0 Pid 1736562 on cnode3-011 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 78 Group  0 Pid 1736563 on cnode3-011 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 79 Group  0 Pid 1736564 on cnode3-011 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#
+# Reducing maxBytes to 26549638485 due to memory limitation
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+  4294967040       6710886    double    none      -1  84157.8   51.03   50.40       0  84183.1   51.02   50.38    N/A
+  8589934080      13421772    double    none      -1   167568   51.26   50.62       0   168489   50.98   50.34    N/A
+ 17179868160      26843544    double    none      -1   335193   51.25   50.61       0   335135   51.26   50.62    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 50.4966 
+#
+# Collective test concluded: alltoall_perf
+#
+
+# nccl-tests version 2.17.8 nccl-headers=22902 nccl-library=22902
+# Collective test starting: sendrecv_perf
+# nThread 1 nGpus 1 minBytes 4294967296 maxBytes 68719476736 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid 2676218 on cnode3-002 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  1 Group  0 Pid 2676219 on cnode3-002 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank  2 Group  0 Pid 2676220 on cnode3-002 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank  3 Group  0 Pid 2676221 on cnode3-002 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank  4 Group  0 Pid 2676222 on cnode3-002 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank  5 Group  0 Pid 2676223 on cnode3-002 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank  6 Group  0 Pid 2676224 on cnode3-002 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank  7 Group  0 Pid 2676225 on cnode3-002 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank  8 Group  0 Pid 1248223 on cnode3-003 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank  9 Group  0 Pid 1248224 on cnode3-003 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 10 Group  0 Pid 1248225 on cnode3-003 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 11 Group  0 Pid 1248226 on cnode3-003 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 12 Group  0 Pid 1248227 on cnode3-003 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 13 Group  0 Pid 1248228 on cnode3-003 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 14 Group  0 Pid 1248229 on cnode3-003 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 15 Group  0 Pid 1248230 on cnode3-003 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 16 Group  0 Pid 1670231 on cnode3-004 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 17 Group  0 Pid 1670232 on cnode3-004 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 18 Group  0 Pid 1670233 on cnode3-004 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 19 Group  0 Pid 1670234 on cnode3-004 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 20 Group  0 Pid 1670235 on cnode3-004 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 21 Group  0 Pid 1670236 on cnode3-004 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 22 Group  0 Pid 1670237 on cnode3-004 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 23 Group  0 Pid 1670238 on cnode3-004 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 24 Group  0 Pid 1767202 on cnode3-005 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 25 Group  0 Pid 1767203 on cnode3-005 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 26 Group  0 Pid 1767204 on cnode3-005 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 27 Group  0 Pid 1767205 on cnode3-005 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 28 Group  0 Pid 1767206 on cnode3-005 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 29 Group  0 Pid 1767207 on cnode3-005 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 30 Group  0 Pid 1767208 on cnode3-005 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 31 Group  0 Pid 1767209 on cnode3-005 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 32 Group  0 Pid 1662582 on cnode3-006 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 33 Group  0 Pid 1662583 on cnode3-006 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 34 Group  0 Pid 1662584 on cnode3-006 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 35 Group  0 Pid 1662585 on cnode3-006 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 36 Group  0 Pid 1662586 on cnode3-006 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 37 Group  0 Pid 1662587 on cnode3-006 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 38 Group  0 Pid 1662588 on cnode3-006 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 39 Group  0 Pid 1662589 on cnode3-006 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 40 Group  0 Pid 2555099 on cnode3-007 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 41 Group  0 Pid 2555100 on cnode3-007 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 42 Group  0 Pid 2555101 on cnode3-007 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 43 Group  0 Pid 2555102 on cnode3-007 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 44 Group  0 Pid 2555103 on cnode3-007 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 45 Group  0 Pid 2555104 on cnode3-007 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 46 Group  0 Pid 2555105 on cnode3-007 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 47 Group  0 Pid 2555106 on cnode3-007 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 48 Group  0 Pid 1641503 on cnode3-008 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 49 Group  0 Pid 1641504 on cnode3-008 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 50 Group  0 Pid 1641505 on cnode3-008 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 51 Group  0 Pid 1641506 on cnode3-008 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 52 Group  0 Pid 1641507 on cnode3-008 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 53 Group  0 Pid 1641508 on cnode3-008 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 54 Group  0 Pid 1641509 on cnode3-008 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 55 Group  0 Pid 1641510 on cnode3-008 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 56 Group  0 Pid 1641491 on cnode3-009 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 57 Group  0 Pid 1641492 on cnode3-009 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 58 Group  0 Pid 1641493 on cnode3-009 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 59 Group  0 Pid 1641494 on cnode3-009 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 60 Group  0 Pid 1641495 on cnode3-009 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 61 Group  0 Pid 1641496 on cnode3-009 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 62 Group  0 Pid 1641497 on cnode3-009 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 63 Group  0 Pid 1641498 on cnode3-009 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 64 Group  0 Pid 1629384 on cnode3-010 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 65 Group  0 Pid 1629385 on cnode3-010 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 66 Group  0 Pid 1629386 on cnode3-010 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 67 Group  0 Pid 1629387 on cnode3-010 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 68 Group  0 Pid 1629388 on cnode3-010 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 69 Group  0 Pid 1629389 on cnode3-010 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 70 Group  0 Pid 1629390 on cnode3-010 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 71 Group  0 Pid 1629391 on cnode3-010 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#  Rank 72 Group  0 Pid 1738338 on cnode3-011 device  0 [0000:1b:00] NVIDIA H100 80GB HBM3
+#  Rank 73 Group  0 Pid 1738339 on cnode3-011 device  1 [0000:43:00] NVIDIA H100 80GB HBM3
+#  Rank 74 Group  0 Pid 1738341 on cnode3-011 device  2 [0000:52:00] NVIDIA H100 80GB HBM3
+#  Rank 75 Group  0 Pid 1738342 on cnode3-011 device  3 [0000:61:00] NVIDIA H100 80GB HBM3
+#  Rank 76 Group  0 Pid 1738343 on cnode3-011 device  4 [0000:9d:00] NVIDIA H100 80GB HBM3
+#  Rank 77 Group  0 Pid 1738344 on cnode3-011 device  5 [0000:c3:00] NVIDIA H100 80GB HBM3
+#  Rank 78 Group  0 Pid 1738345 on cnode3-011 device  6 [0000:d1:00] NVIDIA H100 80GB HBM3
+#  Rank 79 Group  0 Pid 1738346 on cnode3-011 device  7 [0000:df:00] NVIDIA H100 80GB HBM3
+#
+# Reducing maxBytes to 26549638485 due to memory limitation
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+  4294967296     536870912    double     sum      -1   281983   15.23   15.23       0   281869   15.24   15.24    N/A
+  8589934592    1073741824    double     sum      -1   563880   15.23   15.23       0   563935   15.23   15.23    N/A
+ 17179869184    2147483648    double     sum      -1  1127893   15.23   15.23       0  1127917   15.23   15.23    N/A
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 15.233 
+#
+# Collective test concluded: sendrecv_perf
+#
+
