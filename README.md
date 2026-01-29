@@ -7,11 +7,11 @@ Automated inter-node bandwidth testing and visualization for GPU clusters using 
 </p>
 
 <p align="center">
-  <img src="./assets/8node_heatmap_alltoall_allG.png"
-       alt="Example heatmap of an 8-node H100 cluster"
+  <img src="./assets/17node_heatmap_alltoall_allG.png"
+       alt="Example heatmap of an 17-node H100 cluster"
        width="700" />
   <br/>
-  <sub>Example: 8-node H100 cluster bandwidth heatmap (alltoall_perf)</sub>
+  <sub>Example: 17  -node H100 cluster bandwidth heatmap (alltoall_perf)</sub>
 </p>
 
 **Key Features:**
@@ -60,6 +60,7 @@ Automated inter-node bandwidth testing and visualization for GPU clusters using 
   - [Summarize Logs](#summarize-logs)
   - [Generate Bandwidth Plots](#generate-bandwidth-plots)
   - [Generate Heatmaps](#generate-heatmaps)
+  - [Generate Plot Gallery](#generate-plot-gallery)
 - [Configuration](#configuration)
   - [Default Test Parameters](#default-test-parameters)
   - [Default Test Binaries](#default-test-binaries)
@@ -91,28 +92,34 @@ uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
 
 Choose the test type that fits your goal:
 
+```bash
+# Optional: reduce repetition in commands
+export PARTITION="<partition>"
+export CLUSTER="<cluster>"
+```
+
 **Pairwise (recommended for network diagnostics):**
 
 ```bash
-bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c <cluster> -n "node[01-04]"
+bash sbatch_run_nccl_tests_pairs.sh -p "$PARTITION" -c "$CLUSTER" -n "node[01-04]"
 ```
 
 **Single-node (intra-node GPU verification):**
 
 ```bash
-bash sbatch_run_nccl_tests_single.sh -p <partition> -c <cluster>
+bash sbatch_run_nccl_tests_single.sh -p "$PARTITION" -c "$CLUSTER"
 ```
 
 **Multi-node (collective benchmark):**
 
 ```bash
-bash sbatch_run_nccl_tests_multi.sh -p <partition> -c <cluster> --num-nodes 4 --gpn "8"
+bash sbatch_run_nccl_tests_multi.sh -p "$PARTITION" -c "$CLUSTER" --num-nodes 4 --gpn "8"
 ```
 
 **Smoke test (quick sanity check):**
 
 ```bash
-bash sbatch_run_nccl_tests_smoke.sh -p <partition> -c <cluster> -n "node1,node2"
+bash sbatch_run_nccl_tests_smoke.sh -p "$PARTITION" -c "$CLUSTER" -n "node1,node2"
 ```
 
 ### Wait & Process
@@ -126,16 +133,20 @@ watch -n 30 squeue -u $USER  # Auto-refresh
 
 # 1. Summarize logs (all test types)
 python3 summarize_nccl_logs.py \
-  --input benchmarks/<cluster>/nccl-benchmark-results/<test-type>/latest/without-debug/logs
+  --input benchmarks/$CLUSTER/nccl-benchmark-results/<test-type>/latest/without-debug/logs
 
 # 2. Visualizations (test-type specific)
-# Single-node → bandwidth plots:
+# Single-node -> bandwidth plots:
 python3 plot_nccl_bandwidth.py \
-  --input benchmarks/<cluster>/nccl-benchmark-results/single-node/latest/without-debug/logs
+  --input benchmarks/$CLUSTER/nccl-benchmark-results/single-node/latest/without-debug/logs
 
-# Pairwise → heatmaps:
+# Pairwise -> heatmaps:
 python3 generate_topology.py \
-  --csv benchmarks/<cluster>/nccl-benchmark-results/pairwise/latest/without-debug/summary.csv --all
+  --csv benchmarks/$CLUSTER/nccl-benchmark-results/pairwise/latest/without-debug/summary.csv --all
+
+# Plot gallery (bandwidth plots + heatmaps):
+python3 generate_plot_gallery.py \
+  --clusters "$CLUSTER" --output benchmarks/plot-gallery.html
 ```
 
 ## Workflow
@@ -518,6 +529,34 @@ python3 generate_topology.py --csv ./summary.csv --all --topology \
 - `--layout`: Algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`)
 - `--heatmap-values {auto|on|off}`: Show numbers in heatmap cells (default `auto` for ≤20 nodes)
 - `--vmin/--vmax`: Bandwidth color scale range (default: 0 to auto-detected max)
+
+### Generate Plot Gallery
+
+Create an HTML or Markdown gallery to browse plots across clusters, test types, and runs. The gallery scans
+`benchmarks/<cluster>/...` for images under `plots/` (bandwidth) and `topology/` (heatmaps).
+
+```bash
+# HTML gallery (default: benchmarks/plot-gallery.html)
+python3 generate_plot_gallery.py
+
+# Filter to specific clusters
+python3 generate_plot_gallery.py --clusters cluster01,cluster02 \
+  --output benchmarks/plot-gallery.html
+
+# Markdown output
+python3 generate_plot_gallery.py --format md --output benchmarks/plot-gallery.md
+
+# Only bandwidth plots (exclude heatmaps)
+python3 generate_plot_gallery.py --no-topology --output benchmarks/plot-gallery.html
+```
+
+**Key Options:**
+
+- `--clusters LIST`: Comma-separated cluster names to include
+- `--format {html|md}`: Output format (default: `html`)
+- `--output FILE`: Output path
+- `--no-plots`: Exclude bandwidth plots
+- `--no-topology`: Exclude topology heatmaps
 - `--dpi`: Resolution (default: 300)
 
 Run `python3 generate_topology.py --help` for all options.
@@ -530,7 +569,7 @@ Each script has sensible defaults that can be overridden via environment variabl
 
 | Parameter               | Single-Node | Pairwise   | Multi-Node | Smoke    |
 | ----------------------- | ----------- | ---------- | ---------- | -------- |
-| `MAXIMUM_TRANSFER_SIZE` | 64G         | 64G        | 64G        | 512M     |
+| `MAXIMUM_TRANSFER_SIZE` | 16G         | 16G        | 16G        | 512M     |
 | `MINIMUM_TRANSFER_SIZE` | 32M         | 4G         | 32M        | 32M      |
 | `STEP_FACTOR`           | 2           | 2          | 2          | 2        |
 | `ITERS_COUNT`           | 20          | 20         | 20         | 5        |

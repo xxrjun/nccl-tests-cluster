@@ -49,7 +49,7 @@ while [[ $# -gt 0 ]]; do
       PARTITION="$2"; shift 2;;
     -c|--cluster)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
-      CLUSTER_NAME="$2"; shift 2;;
+      CLUSTER="$2"; shift 2;;
     -n|--nodelist)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
       NODELIST="$2"; shift 2;;
@@ -82,14 +82,14 @@ done
 # =============================================================
 
 PARTITION=${PARTITION:-}
-CLUSTER_NAME=${CLUSTER_NAME:-cluster00}
+CLUSTER=${CLUSTER:-cluster00}
 NODELIST=${NODELIST:-}
 NUM_NODES_CLI=${NUM_NODES_CLI:-}
 GPN_LIST=${GPN_LIST:-"1 2 4 8"}
 GPN_LIST=${GPN_LIST//,/ }
 CPUS_PER_TASK=${CPUS_PER_TASK:-2}
 RUN_ID=${RUN_ID:-$(date +%Y%m%d-%H%M%S)}
-RESULTS_ROOT_BASE=${RESULTS_ROOT_BASE:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results"}
+RESULTS_ROOT_BASE=${RESULTS_ROOT_BASE:-"benchmarks/$CLUSTER/nccl-benchmark-results"}
 RESULTS_ROOT=${RESULTS_ROOT:-"$RESULTS_ROOT_BASE/multi-node"}
 RUN_DIR=${RUN_DIR:-"$RESULTS_ROOT/runs/$RUN_ID"}
 LOG_DIR_SET=${LOG_DIR_SET:-0}
@@ -104,7 +104,7 @@ if [[ -z "${PARTITION}" ]]; then
 fi
 
 # Multi-node test defaults
-MAXIMUM_TRANSFER_SIZE=${MAXIMUM_TRANSFER_SIZE:-64G}
+MAXIMUM_TRANSFER_SIZE=${MAXIMUM_TRANSFER_SIZE:-16G}
 MINIMUM_TRANSFER_SIZE=${MINIMUM_TRANSFER_SIZE:-32M}
 STEP_FACTOR=${STEP_FACTOR:-2}
 ITERS_COUNT=${ITERS_COUNT:-20}
