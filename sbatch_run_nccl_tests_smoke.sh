@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
       PARTITION="$2"; shift 2;;
     -c|--cluster)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
-      CLUSTER_NAME="$2"; shift 2;;
+      CLUSTER="$2"; shift 2;;
     -n|--nodelist)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 2; }
       NODELIST="$2"; shift 2;;
@@ -73,12 +73,12 @@ done
 # =============================================================
 
 PARTITION=${PARTITION:-}
-CLUSTER_NAME=${CLUSTER_NAME:-cluster00}
+CLUSTER=${CLUSTER:-cluster00}
 NODELIST=${NODELIST:-}
 GPN=${GPN:-1}
 CPUS_PER_TASK=${CPUS_PER_TASK:-2}
 RUN_ID=${RUN_ID:-$(date +%Y%m%d-%H%M%S)}
-RESULTS_ROOT_BASE=${RESULTS_ROOT_BASE:-"benchmarks/$CLUSTER_NAME/nccl-benchmark-results"}
+RESULTS_ROOT_BASE=${RESULTS_ROOT_BASE:-"benchmarks/$CLUSTER/nccl-benchmark-results"}
 RESULTS_ROOT=${RESULTS_ROOT:-"$RESULTS_ROOT_BASE/smoke"}
 RUN_DIR=${RUN_DIR:-"$RESULTS_ROOT/runs/$RUN_ID"}
 LOG_DIR_SET=${LOG_DIR_SET:-0}
