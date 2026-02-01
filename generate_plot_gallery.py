@@ -6,8 +6,7 @@ Scans benchmarks/<cluster>/... for plots under:
   - */plots/<test_name>/*.png
   - */topology/<test_name>/*.png
 
-Supports both layouts:
-  benchmarks/<cluster>/<test-type>/runs/<run-id>/...
+Expected layout:
   benchmarks/<cluster>/nccl-benchmark-results/<test-type>/runs/<run-id>/...
 """
 
