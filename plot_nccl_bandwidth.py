@@ -66,21 +66,16 @@ RE_FILE_NG_NODES = re.compile(
 
 
 def human_bytes(n: int) -> str:
-    """Convert bytes to human-readable format."""
+    """Convert bytes to human-readable format using integer units."""
+    if n == 0:
+        return "0B"
     units = ["B", "KiB", "MiB", "GiB", "TiB"]
-    v = float(n)
-    for u in units:
-        if v < 1024.0 or u == units[-1]:
-            if u == "B":
-                return f"{int(v)}{u}"
-            elif v >= 100:
-                return f"{v:.0f}{u}"
-            elif v >= 10:
-                return f"{v:.1f}{u}"
-            else:
-                return f"{v:.2f}{u}"
-        v /= 1024.0
-    return f"{n}B"
+    size = int(n)
+    unit_index = 0
+    while unit_index < len(units) - 1 and size % 1024 == 0:
+        size //= 1024
+        unit_index += 1
+    return f"{size}{units[unit_index]}"
 
 
 def split_sections(text: str) -> List[Tuple[str, str]]:
