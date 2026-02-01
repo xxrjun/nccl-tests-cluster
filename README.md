@@ -8,10 +8,10 @@ Automated inter-node bandwidth testing and visualization for GPU clusters using 
 
 <p align="center">
   <img src="./assets/17node_heatmap_alltoall_allG.png"
-       alt="Example heatmap of an 17-node H100 cluster"
+       alt="Example heatmap of a 17-node H100 cluster"
        width="700" />
   <br/>
-  <sub>Example: 17  -node H100 cluster bandwidth heatmap (alltoall_perf)</sub>
+  <sub>Example: 17-node H100 cluster bandwidth heatmap (alltoall_perf)</sub>
 </p>
 
 **Key Features:**
@@ -19,7 +19,7 @@ Automated inter-node bandwidth testing and visualization for GPU clusters using 
 - Run **[NCCL Tests](https://github.com/NVIDIA/nccl-tests)** in single-node, multi-node, and pairwise modes
 - Parse logs into structured CSV/Markdown reports
 - Visualize bandwidth with heatmaps and plots
-- Full **[SLURM](https://slurm.schedmd.com/documentation.html) **integration
+- Full **[SLURM](https://slurm.schedmd.com/documentation.html)** integration
 
 ### Test Types at a Glance
 
@@ -79,74 +79,34 @@ Automated inter-node bandwidth testing and visualization for GPU clusters using 
 ```bash
 git clone https://github.com/xxrjun/nccl-tests-cluster.git
 cd nccl-tests-cluster
-
-# Build NCCL and tests
 bash build_nccl_and_tests.sh
-
-# Python environment
-uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
-# Or: python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
 ```
 
 ### Run Tests
 
-Choose the test type that fits your goal:
+Set your partition and cluster once, then run a test:
 
 ```bash
-# Optional: reduce repetition in commands
-export PARTITION="<partition>"
-export CLUSTER="<cluster>"
+PARTITION="<partition>"
+CLUSTER="<cluster>"
+bash sbatch_run_nccl_tests_pairs.sh -p "$PARTITION" -c "$CLUSTER" -n "<node-list>"
 ```
 
-**Pairwise (recommended for network diagnostics):**
+> [!NOTE]
+> Node naming differs by cluster. Replace `<node-list>` with your local format, e.g., `-n "node[01-04]"` or `-n "cnode-[001-004]"`.
 
-```bash
-bash sbatch_run_nccl_tests_pairs.sh -p "$PARTITION" -c "$CLUSTER" -n "node[01-04]"
-```
-
-**Single-node (intra-node GPU verification):**
-
-```bash
-bash sbatch_run_nccl_tests_single.sh -p "$PARTITION" -c "$CLUSTER"
-```
-
-**Multi-node (collective benchmark):**
-
-```bash
-bash sbatch_run_nccl_tests_multi.sh -p "$PARTITION" -c "$CLUSTER" --num-nodes 4 --gpn "8"
-```
-
-**Smoke test (quick sanity check):**
-
-```bash
-bash sbatch_run_nccl_tests_smoke.sh -p "$PARTITION" -c "$CLUSTER" -n "node1,node2"
-```
+See [Usage](#usage) for single-node, multi-node, and smoke test examples.
 
 ### Wait & Process
 
 ```bash
-# Monitor jobs
-squeue -u $USER
-watch -n 30 squeue -u $USER  # Auto-refresh
-
-# After jobs complete:
-
-# 1. Summarize logs (all test types)
-python3 summarize_nccl_logs.py \
-  --input benchmarks/$CLUSTER/nccl-benchmark-results/<test-type>/latest/without-debug/logs
-
-# 2. Visualizations (test-type specific)
-# Single-node -> bandwidth plots:
-python3 plot_nccl_bandwidth.py \
-  --input benchmarks/$CLUSTER/nccl-benchmark-results/single-node/latest/without-debug/logs
-
-# Pairwise -> heatmaps:
-python3 generate_topology.py \
-  --csv benchmarks/$CLUSTER/nccl-benchmark-results/pairwise/latest/without-debug/summary.csv --all
-
-# Plot gallery (bandwidth plots + heatmaps):
-python3 generate_plot_gallery.py \
-  --clusters "$CLUSTER" --output benchmarks/plot-gallery.html
+squeue -u "$USER"
+python3 summarize_nccl_logs.py --input benchmarks/$CLUSTER/nccl-benchmark-results/pairwise/latest/without-debug/logs
+python3 generate_topology.py --csv benchmarks/$CLUSTER/nccl-benchmark-results/pairwise/latest/without-debug/summary.csv --all
+python3 generate_plot_gallery.py --clusters "$CLUSTER" --output benchmarks/plot-gallery.html
 ```
 
 ## Workflow
@@ -229,9 +189,9 @@ cd nccl-tests-cluster
 ```
 
 > [!TIP]
-> This project is build on [NVIDIA/nccl](https://github.com/nvidia/nccl) and [NVIDIA/nccl-tests](https://github.com/NVIDIA/nccl-tests). Please refer to their README files for more information about NCCL and NCCL tests.
+> This project is built on [NVIDIA/nccl](https://github.com/nvidia/nccl) and [NVIDIA/nccl-tests](https://github.com/NVIDIA/nccl-tests). Please refer to their README files for more information about NCCL and NCCL Tests.
 >
-> Or you can run with the provided build script `build_nccl_and_tests.sh` to build NCCL and NCCL tests automatically.
+> Or use the provided build script `build_nccl_and_tests.sh` to build NCCL and NCCL Tests automatically.
 
 ```bash
 bash build_nccl_and_tests.sh
@@ -261,41 +221,33 @@ uv pip install -r requirements.txt
 **Option 2: Using pip**:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ## Usage
 
+Common options for all SLURM submission scripts (single, pairwise, multi-node, smoke). Run `bash sbatch_run_nccl_tests_*.sh --help` for the full list.
+
+| Option            | Description                                     | Default                |
+| ----------------- | ----------------------------------------------- | ---------------------- |
+| `-p, --partition` | SLURM partition name                            | Required               |
+| `-c, --cluster`   | Cluster name for log organization               | `cluster00`            |
+| `-n, --nodelist`  | Compressed nodelist (e.g., `"cnode-[001-004]"`) | All nodes in partition |
+| `-r, --run-id`    | Run ID for timestamped results                  | `YYYYMMDD-HHMMSS`      |
+| `--gpn`           | Space- or comma-separated GPU counts            | Script defaults        |
+| `--dry-run`       | Preview commands without submitting             | `false`                |
+| `--debug`         | Enable NCCL debug mode (affects performance)    | `false`                |
+
 ### Run NCCL Tests (Single-Node)
 
 Test intra-node GPU communication performance on individual nodes.
 
-**View help:**
-
 ```bash
-bash sbatch_run_nccl_tests_single.sh --help
-```
-
-**Basic usage:**
-
-```bash
-# Test all nodes in a partition with default GPU counts (4, 8)
 bash sbatch_run_nccl_tests_single.sh -p <partition> -c cluster00
 
-# Test specific nodes
 bash sbatch_run_nccl_tests_single.sh -p <partition> -c cluster00 -n "cnode-[001-004]"
-
-# Custom GPU counts
-bash sbatch_run_nccl_tests_single.sh -p <partition> -c cluster00 --gpn "2 4 8"
-
-# Dry run (preview without submitting)
-bash sbatch_run_nccl_tests_single.sh -p <partition> -c cluster00 --dry-run
-
-# Enable debug mode
-bash sbatch_run_nccl_tests_single.sh -p <partition> -c cluster00 --debug
-
-# Resume a prior run (skips existing logs)
-bash sbatch_run_nccl_tests_single.sh -p <partition> -c cluster00 --run-id 20250114-153012
 ```
 
 **Example output:**
@@ -326,32 +278,10 @@ NCCL DEBUG:     0
 
 Test inter-node GPU communication performance across all node pairs.
 
-**View help:**
-
 ```bash
-bash sbatch_run_nccl_tests_pairs.sh --help
-```
-
-**Basic usage:**
-
-```bash
-# Test all node pairs in a partition with default GPU counts (1, 2, 4, 8)
 bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c cluster00
 
-# Test specific nodes
 bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c cluster00 -n "cnode-[001-004]"
-
-# Custom GPU counts
-bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c cluster00 --gpn "2 4 8"
-
-# Dry run (preview without submitting)
-bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c cluster00 --dry-run
-
-# Enable debug mode
-bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c cluster00 --debug
-
-# Resume a prior run (skips existing logs)
-bash sbatch_run_nccl_tests_pairs.sh -p <partition> -c cluster00 --run-id 20250114-153012
 ```
 
 > [!TIP]
@@ -387,36 +317,14 @@ NCCL DEBUG:     0
 scancel -u $USER
 ```
 
-**Common CLI Options:**
-| Option | Description | Default |
-| ------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `-p, --partition` | SLURM partition name | Required |
-| `-c, --cluster` | Cluster name for log organization | `cluster00` |
-| `-n, --nodelist` | Compressed nodelist (e.g., `"cnode-[001-004]"`) | All nodes in partition |
-| `-r, --run-id` | Run ID for timestamped results | `YYYYMMDD-HHMMSS` |
-| `-l, --log-dir` | Custom log directory | `benchmarks/<CLUSTER>/nccl-benchmark-results/<test-type>/runs/<RUN_ID>/without-debug/logs` |
-| `--gpn` | Space-separated GPU counts | Single: `"4 8"`, Pairs: `"1 2 4 8"` |
-| `--dry-run` | Preview commands without submitting | `false` |
-| `--debug` | Enable NCCL debug mode (affects performance) | `false` |
-| `--gpn` (comma ok) | GPU counts can also be comma-separated, e.g., `"1,2,4,8"` |
-
 ### Run NCCL Tests (Multi-Node)
 
 Run one NCCL job across N>=2 nodes (not all pair combinations).
 
 ```bash
-# Use first 4 nodes in the partition, 8 GPUs per node
 bash sbatch_run_nccl_tests_multi.sh -p <partition> -c cluster00 --num-nodes 4 --gpn "8"
 
-# Explicit nodelist
 bash sbatch_run_nccl_tests_multi.sh -p <partition> -c cluster00 -n "cnode-[001-004]"
-
-# Debug mode and custom tests (space-separated list)
-RUN_BIN_LIST="all_reduce_perf all_gather_perf" \
-bash sbatch_run_nccl_tests_multi.sh -p <partition> -c cluster00 --num-nodes 8 --gpn "4"
-
-# Dry run
-bash sbatch_run_nccl_tests_multi.sh -p <partition> --dry-run
 ```
 
 ### Quick Smoke Test
@@ -424,11 +332,7 @@ bash sbatch_run_nccl_tests_multi.sh -p <partition> --dry-run
 Fast two-node sanity check (all_reduce_perf + sendrecv_perf, small message sizes).
 
 ```bash
-# Default: first two nodes in the partition, 1 GPU per node
 bash sbatch_run_nccl_tests_smoke.sh -p <partition> -c cluster00
-
-# Explicit nodes and debug
-bash sbatch_run_nccl_tests_smoke.sh -p <partition> -c cluster00 -n "cnode-[001-002]" --debug
 ```
 
 ### Summarize Logs
@@ -436,17 +340,8 @@ bash sbatch_run_nccl_tests_smoke.sh -p <partition> -c cluster00 -n "cnode-[001-0
 Parse NCCL test logs and generate summary reports (CSV + Markdown). All paths are resolved automatically (symlinks included), so commands work from the repository root.
 
 ```bash
-# Process single-node test logs (latest run)
 python3 summarize_nccl_logs.py \
   --input benchmarks/<cluster-name>/nccl-benchmark-results/single-node/latest/without-debug/logs
-
-# Process pairwise test logs (latest run)
-python3 summarize_nccl_logs.py \
-  --input benchmarks/<cluster-name>/nccl-benchmark-results/pairwise/latest/without-debug/logs
-
-# Batch mode: process both with-debug/ and without-debug/ for a run
-python3 summarize_nccl_logs.py \
-  --input benchmarks/<cluster-name>/nccl-benchmark-results/pairwise/latest
 
 # Custom output paths
 python3 summarize_nccl_logs.py \
@@ -454,6 +349,8 @@ python3 summarize_nccl_logs.py \
   --save-csv /path/to/summary.csv \
   --save-md  /path/to/summary.md
 ```
+
+Run `python3 summarize_nccl_logs.py --help` for all options.
 
 **Filename Format:**
 
@@ -467,68 +364,48 @@ python3 summarize_nccl_logs.py \
 Generate bandwidth vs message size plots for visualizing NCCL performance trends. All paths are resolved automatically (symlinks included), so commands work from the repository root.
 
 ```bash
-# Generate plots from single-node logs (all tests and G values)
 python3 plot_nccl_bandwidth.py \
   --input benchmarks/<cluster-name>/nccl-benchmark-results/single-node/latest/without-debug/logs
 
-# Filter by specific test
-python3 plot_nccl_bandwidth.py --input ./logs --test all_reduce_perf
-
-# Filter by GPU count
-python3 plot_nccl_bandwidth.py --input ./logs --g 8
-
-# Use algorithm bandwidth instead of bus bandwidth
-python3 plot_nccl_bandwidth.py --input ./logs --metric algbw
-
-# Save parsed data to CSV for further analysis
-python3 plot_nccl_bandwidth.py --input ./logs --save-csv detailed_data.csv
+python3 plot_nccl_bandwidth.py --input ./logs --test all_reduce_perf --g 8 --metric algbw --save-csv detailed_data.csv
 ```
 
 **Output:** `plots/{test_name}/G{n}_{node}.png` (individual) + `G{n}_combined.png` (comparison)
 
-**Key Options:**
+**Key Options (see `--help` for full list):**
 
-- `--test NAME`: Filter by test name (e.g., `all_reduce_perf`)
-- `--g N`: Filter by GPU count
-- `--metric {busbw|algbw}`: Bandwidth metric (default: `busbw`)
-- `--out-dir DIR`: Custom output directory
-- `--save-csv FILE`: Export per-message-size data to CSV
-
-Run `python3 plot_nccl_bandwidth.py --help` for all options.
+| Option            | Description                                   |
+| ----------------- | --------------------------------------------- | ----------------------------------- |
+| `--test NAME`     | Filter by test name (e.g., `all_reduce_perf`) |
+| `--g N`           | Filter by GPU count                           |
+| `--metric {busbw  | algbw}`                                       | Bandwidth metric (default: `busbw`) |
+| `--out-dir DIR`   | Custom output directory                       |
+| `--save-csv FILE` | Export per-message-size data to CSV           |
 
 ### Generate Heatmaps
 
 Visualize network bandwidth with heatmaps from `summary.csv`. By default, only heatmaps are generated; topology graphs require the `--topology` flag. All paths are resolved automatically (symlinks included), so commands work from the repository root.
 
 ```bash
-# Process all tests and G values (generates heatmaps only by default)
 python3 generate_topology.py \
   --csv benchmarks/<cluster-name>/nccl-benchmark-results/pairwise/latest/without-debug/summary.csv \
   --all
 
-# Single test, all G values
-python3 generate_topology.py --csv ./summary.csv --test alltoall_perf
-
-# Also generate topology graphs (in addition to heatmaps)
 python3 generate_topology.py --csv ./summary.csv --all --topology
-
-# With custom styling
-python3 generate_topology.py --csv ./summary.csv --all --topology \
-  --vmin 0 --vmax 80 --layout shell --adjust-labels
 ```
 
 **Output:** `topology/{test_name}/G{n}_heatmap.png` and `allG_heatmap.png` by default; add `--topology` to also generate `G{n}.png` + `allG.png` (combined grid)
 
-**Key Options:**
+**Key Options (see `--help` for full list):**
 
-- `--all`: Process all tests and G values
-- `--test NAME`: Process specific test only
-- `--topology`: Also generate topology graph PNG(s) in addition to heatmaps
-- `--topology-only`: Generate only topology graphs (skip heatmaps)
-- `--adjust-labels`: Auto-adjust overlapping labels (useful for dense graphs)
-- `--layout`: Algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`)
-- `--heatmap-values {auto|on|off}`: Show numbers in heatmap cells (default `auto` for ≤20 nodes)
-- `--vmin/--vmax`: Bandwidth color scale range (default: 0 to auto-detected max)
+| Option                  | Description                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------ |
+| `--all`                 | Process all tests and G values                                                     |
+| `--test NAME`           | Process specific test only                                                         |
+| `--topology`            | Also generate topology graphs in addition to heatmaps                              |
+| `--layout NAME`         | Layout algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`) |
+| `--heatmap-values {auto | on                                                                                 | off}` | Show numbers in heatmap cells (default `auto` for ≤20 nodes) |
+| `--vmin/--vmax`         | Bandwidth color scale range                                                        |
 
 ### Generate Plot Gallery
 
@@ -540,26 +417,21 @@ Create an HTML or Markdown gallery to browse plots across clusters, test types, 
 python3 generate_plot_gallery.py
 
 # Filter to specific clusters
-python3 generate_plot_gallery.py --clusters cluster01,cluster02 \
-  --output benchmarks/plot-gallery.html
-
-# Markdown output
-python3 generate_plot_gallery.py --format md --output benchmarks/plot-gallery.md
-
-# Only bandwidth plots (exclude heatmaps)
-python3 generate_plot_gallery.py --no-topology --output benchmarks/plot-gallery.html
+python3 generate_plot_gallery.py --clusters cluster01,cluster02 --output benchmarks/plot-gallery.html
 ```
 
-**Key Options:**
+**Key Options (see `--help` for full list):**
 
-- `--clusters LIST`: Comma-separated cluster names to include
-- `--format {html|md}`: Output format (default: `html`)
-- `--output FILE`: Output path
-- `--no-plots`: Exclude bandwidth plots
-- `--no-topology`: Exclude topology heatmaps
-- `--dpi`: Resolution (default: 300)
+| Option            | Description                              |
+| ----------------- | ---------------------------------------- | ------------------------------- |
+| `--clusters LIST` | Comma-separated cluster names to include |
+| `--format {html   | md}`                                     | Output format (default: `html`) |
+| `--output FILE`   | Output path                              |
+| `--no-plots`      | Exclude bandwidth plots                  |
+| `--no-topology`   | Exclude topology heatmaps                |
+| `--dpi`           | Resolution (default: 300)                |
 
-Run `python3 generate_topology.py --help` for all options.
+Run `python3 generate_plot_gallery.py --help` for all options.
 
 ## Configuration
 
