@@ -374,13 +374,13 @@ python3 plot_nccl_bandwidth.py --input ./logs --test all_reduce_perf --g 8 --met
 
 **Key Options (see `--help` for full list):**
 
-| Option            | Description                                   |
-| ----------------- | --------------------------------------------- | ----------------------------------- |
-| `--test NAME`     | Filter by test name (e.g., `all_reduce_perf`) |
-| `--g N`           | Filter by GPU count                           |
-| `--metric {busbw  | algbw}`                                       | Bandwidth metric (default: `busbw`) |
-| `--out-dir DIR`   | Custom output directory                       |
-| `--save-csv FILE` | Export per-message-size data to CSV           |
+| Option                      | Description                                   |
+| --------------------------- | --------------------------------------------- |
+| `--test NAME`               | Filter by test name (e.g., `all_reduce_perf`) |
+| `--g N`                     | Filter by GPU count                           |
+| `--metric {busbw \| algbw}` | Bandwidth metric (default: `busbw`)           |
+| `--out-dir DIR`             | Custom output directory                       |
+| `--save-csv FILE`           | Export per-message-size data to CSV           |
 
 ### Generate Heatmaps
 
@@ -398,14 +398,14 @@ python3 generate_topology.py --csv ./summary.csv --all --topology
 
 **Key Options (see `--help` for full list):**
 
-| Option                  | Description                                                                        |
-| ----------------------- | ---------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------ |
-| `--all`                 | Process all tests and G values                                                     |
-| `--test NAME`           | Process specific test only                                                         |
-| `--topology`            | Also generate topology graphs in addition to heatmaps                              |
-| `--layout NAME`         | Layout algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`) |
-| `--heatmap-values {auto | on                                                                                 | off}` | Show numbers in heatmap cells (default `auto` for ≤20 nodes) |
-| `--vmin/--vmax`         | Bandwidth color scale range                                                        |
+| Option                                 | Description                                                                        |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| `--all`                                | Process all tests and G values                                                     |
+| `--test NAME`                          | Process specific test only                                                         |
+| `--topology`                           | Also generate topology graphs in addition to heatmaps                              |
+| `--layout NAME`                        | Layout algorithm (`kamada`, `shell`, `spring`, `circular`, `bipartite`, `cluster`) |
+| `--heatmap-values {auto \| on \| off}` | Show numbers in heatmap cells (default `auto` for ≤20 nodes)                       |
+| `--vmin/--vmax`                        | Bandwidth color scale range                                                        |
 
 ### Generate Plot Gallery
 
@@ -422,14 +422,14 @@ python3 generate_plot_gallery.py --clusters cluster01,cluster02 --output benchma
 
 **Key Options (see `--help` for full list):**
 
-| Option            | Description                              |
-| ----------------- | ---------------------------------------- | ------------------------------- |
-| `--clusters LIST` | Comma-separated cluster names to include |
-| `--format {html   | md}`                                     | Output format (default: `html`) |
-| `--output FILE`   | Output path                              |
-| `--no-plots`      | Exclude bandwidth plots                  |
-| `--no-topology`   | Exclude topology heatmaps                |
-| `--dpi`           | Resolution (default: 300)                |
+| Option                  | Description                              |
+| ----------------------- | ---------------------------------------- |
+| `--clusters LIST`       | Comma-separated cluster names to include |
+| `--format {html \| md}` | Output format (default: `html`)          |
+| `--output FILE`         | Output path                              |
+| `--no-plots`            | Exclude bandwidth plots                  |
+| `--no-topology`         | Exclude topology heatmaps                |
+| `--dpi`                 | Resolution (default: 300)                |
 
 Run `python3 generate_plot_gallery.py --help` for all options.
 
