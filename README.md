@@ -21,6 +21,10 @@ Automated inter-node bandwidth testing and visualization for GPU clusters using 
 - Visualize bandwidth with heatmaps and plots
 - Full **[SLURM](https://slurm.schedmd.com/documentation.html)** integration
 
+Archived benchmark outputs are kept in a separate repository:
+[`nccl-tests-cluster-results`](https://github.com/xxrjun/nccl-tests-cluster-results).
+Generated local outputs under `benchmarks/*/nccl-benchmark-results/` are ignored by this repository.
+
 ### Test Types at a Glance
 
 | Test Type       | Purpose                       | Best For                                  |
