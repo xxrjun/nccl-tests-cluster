@@ -2,7 +2,10 @@ nccl/
 __pycache__/
 
 _debug.log
-# benchmarks
+
+# Generated benchmark outputs
+benchmarks/*/nccl-benchmark-results/
+benchmarks/plot-gallery.html
 
 # dotenv
 .env
