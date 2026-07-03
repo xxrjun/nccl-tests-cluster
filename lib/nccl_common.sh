@@ -16,8 +16,10 @@
 setup_nccl_env() {
   local debug=${1:-0}
 
-  export NCCL_HOME="${NCCL_HOME:-$HOME/nccl-tests-cluster/nccl/build}"
-  export NCCL_TEST="${NCCL_TEST:-$HOME/nccl-tests-cluster/nccl/nccl-tests}"
+  local repo_root
+  repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  export NCCL_HOME="${NCCL_HOME:-$repo_root/nccl/build}"
+  export NCCL_TEST="${NCCL_TEST:-$repo_root/nccl/nccl-tests}"
   export LD_LIBRARY_PATH="$NCCL_HOME/lib:${LD_LIBRARY_PATH:-}"
 
   if [[ ! -d "${NCCL_TEST}/build" ]]; then

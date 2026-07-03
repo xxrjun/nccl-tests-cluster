@@ -28,9 +28,9 @@ Options:
   -h, --help                 Show this help
 
 Environment:
-  NCCL_HOME                  Path to NCCL installation (default: $HOME/nccl-tests-cluster/nccl/build)
-  NCCL_TEST                  Path to nccl-tests repo (default: $HOME/nccl-tests-cluster/nccl/nccl-tests)
-  LD_LIBRARY_PATH            Path to CUDA libraries (default: $HOME/nccl-tests-cluster/nccl/build/lib)
+  NCCL_HOME                  Path to NCCL installation (default: <repo>/nccl/build)
+  NCCL_TEST                  Path to nccl-tests repo (default: <repo>/nccl/nccl-tests)
+  LD_LIBRARY_PATH            Path to CUDA libraries (default: <repo>/nccl/build/lib)
 
   (optional) NCCL_SOCKET_IFNAME  Specify network interface for NCCL communication.
   (optional) NCCL_IB_HCA         Specify InfiniBand HCA for NCCL

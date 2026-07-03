@@ -1,13 +1,15 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # YOU MAY NEED TO CHANGE THE PATH BELOW
 export CUDA_HOME=${CUDA_HOME:-"/usr/local/cuda"}
-export NCCL_HOME="${NCCL_HOME:-$HOME/nccl-tests-cluster/nccl/build}"
+export NCCL_HOME="${NCCL_HOME:-$SCRIPT_DIR/nccl/build}"
 export LD_LIBRARY_PATH=$NCCL_HOME/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 # export PATH=/usr/local/cuda/bin:$PATH
 
+cd "$SCRIPT_DIR"
 git clone https://github.com/NVIDIA/nccl.git || true
 if [ ! -d nccl ]; then
     echo "Error: NCCL repository not found!"

@@ -29,9 +29,9 @@ Options:
   -h, --help                 Show this help
 
 Environment:
-  NCCL_HOME                  Path to NCCL installation (default: $HOME/nccl-tests-cluster/nccl/build)
-  NCCL_TEST                  Path to nccl-tests repo (default: $HOME/nccl-tests-cluster/nccl/nccl-tests)
-  LD_LIBRARY_PATH            Path to CUDA libraries (default: $HOME/nccl-tests-cluster/nccl/build/lib)
+  NCCL_HOME                  Path to NCCL installation (default: <repo>/nccl/build)
+  NCCL_TEST                  Path to nccl-tests repo (default: <repo>/nccl/nccl-tests)
+  LD_LIBRARY_PATH            Path to CUDA libraries (default: <repo>/nccl/build/lib)
 
   (optional) NCCL_SOCKET_IFNAME  Specify network interface for NCCL communication.
   (optional) NCCL_IB_HCA         Specify InfiniBand HCA for NCCL
@@ -68,7 +68,7 @@ while [[ $# -gt 0 ]]; do
     *)
       echo "Unknown option: $1" >&2
       usage; exit 2;;
-esac
+  esac
 done
 
 
@@ -230,6 +230,3 @@ print_submission_summary "Submission Summary" \
   "Skipped" "${NUM_EXIST}" \
   "DRY RUN" "${DRY_RUN}" \
   "NCCL DEBUG" "${DEBUG}"
-printf "%-15s %s\n" "DRY RUN:"        "${DRY_RUN}"
-printf "%-15s %s\n" "NCCL DEBUG:"     "${DEBUG}"
-echo "=========================================="

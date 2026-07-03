@@ -184,10 +184,9 @@ nccl-tests-cluster/                    # Repository root (run all commands from 
 
 ### Clone Repository and Build NCCL
 
-For convenience, it is recommended to clone this repository into `$HOME/` by default. Otherwise, you might need to modify the paths in `sbatch_run_nccl_tests_pairs.sh` accordingly.
+Clone the repository anywhere — paths resolve relative to the repository root, so no manual path edits are needed.
 
 ```bash
-cd $HOME
 git clone https://github.com/xxrjun/nccl-tests-cluster.git
 cd nccl-tests-cluster
 ```
